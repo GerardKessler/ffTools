@@ -3,7 +3,6 @@
 # This file is covered by the GNU General Public License.
 
 import wx
-import gui
 from threading import Thread
 import subprocess
 from re import compile
@@ -11,33 +10,35 @@ from time import sleep
 import os
 import shutil
 import zipfile
+import gui
 import globalPluginHandler
-from comtypes.client import CreateObject as COMCreate
-import controlTypes
-import api
-from scriptHandler import script
 from urllib import request
+import socket
+from comtypes.client import CreateObject as COMCreate
+
+import api
+import controlTypes
+from scriptHandler import script
 from ui import message, browseableMessage
 from tones import beep
-import socket
 
 # # código desarrollado originalmente por Alberto Buffolino para el complemento Column review
 def getFilePath():
-	docPath = ""
-	fg = api.getForegroundObject()
+	docPath= ""
+	fg= api.getForegroundObject()
 	if fg.role != api.controlTypes.Role.PANE and fg.appModule.appName != "explorer":
 		return None
-	shell = COMCreate("shell.application")
+	shell= COMCreate("shell.application")
 	for window in shell.Windows():
 		try:
 			if window.hwnd and window.hwnd == fg.windowHandle:
-				focusedItem=window.Document.FocusedItem
+				focusedItem= window.Document.FocusedItem
 				break
 		except:
 			pass
 	else:
-		desktop_path = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
-		docPath = '\"' + desktop_path + '\\' + api.getDesktopObject().objectWithFocus().name + '\"'
+		desktop_path= os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
+		docPath= '\"' + desktop_path + '\\' + api.getDesktopObject().objectWithFocus().name + '\"'
 		return None
 	targetFile= focusedItem.path
 	return targetFile
@@ -49,6 +50,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self, *args, **kwargs):
 		super(GlobalPlugin, self).__init__()
 		self.check= False
+		self.switch= False
 		self.percent= 0
 		self.verify()
 
@@ -101,17 +103,34 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		shutil.rmtree(os.path.join(MAINPATH, 'bin', root))
 		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), _('ffTools:'), wx.OK).ShowModal()
 
-	# def getScript(self, gesture):
-		# script = globalPluginHandler.GlobalPlugin.getScript(self, gesture)
-		# if not script:
-		# self.clearGesturesBindings()
+	def getScript(self, gesture):
+		if not self.switch:
+			return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
+		script= globalPluginHandler.GlobalPlugin.getScript(self, gesture)
+		if not script:
+			self.finish()
+			return
+		return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
+
+	def finish(self):
+		beep(220,10)
+		self.switch= False
+		self.clearGestureBindings()
+		self.bindGestures(self.__gestures)
 
 	@script(
 		category= 'ffTools',
-		description= _('Activa la previsualización del archivo con el foco'),
-		gesture= None
+		# Translators: Descripción del comando en el diálogo gestos de entrada
+		description= _('Activa la capa de comandos'),
+		gesture= 'kb:NVDA+control+f'
 	)
+	def script_commandLayer(self, gesture):
+		beep(880,5)
+		self.bindGestures(self.__newGestures)
+		self.switch= True
+
 	def script_preview(self, gesture):
+		self.finish()
 		if not self.check:
 			self.verify()
 			return
@@ -119,40 +138,44 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if file_path:
 			command= f'{os.path.join(MAINPATH, "bin", "ffplay.exe")} "{file_path}"'
 			newProcessing = NewProcessing(file_path)
-			Thread(target=newProcessing.newProcess, args=(command, False), daemon= True).start()
+			Thread(target= newProcessing.newProcess, args= (command, False), daemon= True).start()
+
+	__newGestures= {
+		"kb:space": "preview"
+	}
 
 class NewProcessing():
 
 	def __init__(self, file_path):
-		self.settings = subprocess.STARTUPINFO()
+		self.settings= subprocess.STARTUPINFO()
 		self.settings.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-		self.level = None
+		self.level= None
 
 	def detect(self):
-		out = self.getOut()
-		self.level = self.extractValue(out)
+		out= self.getOut()
+		self.level= self.extractValue(out)
 		print(f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}')
 
 	def volume(self):
-		new_level = float(self.level) + 1.0
+		new_level= float(self.level) + 1.0
 		print(f'Aumentando el volúmen del archivo en {new_level} DB')
 		self.newProcess(str(new_level))
 
 	def getOut(self):
-		command = f'ffmpeg -i "{self.file_path}" -af "volumedetect" -dn -vn -sn -f null /dev/null'
-		out = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo=self.settings)
-		content = str(out.stderr.read())
+		command= f'ffmpeg -i "{self.file_path}" -af "volumedetect" -dn -vn -sn -f null /dev/null'
+		out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+		content= str(out.stderr.read())
 		return content
 
 	def newProcess(self, command, hide_console):
-		# command = f'{os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')} -i "{self.file_path}" -af volume={new_level}dB:precision=fixed "{os.path.splitext(self.file_path)[0]}-f.mp3"'
+		# command= f'{os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')} -i "{self.file_path}" -af volume= {new_level}dB:precision= fixed "{os.path.splitext(self.file_path)[0]}-f.mp3"'
 		if hide_console:
-			subprocess.Popen(command, startupinfo=self.settings)
+			subprocess.Popen(command, startupinfo= self.settings)
 		else:
 			subprocess.run(command)
 
 	def extractValue(self, content):
-		pattern = compile(r'max_volume:\s+\-?(\d+\.\d+)\sdB')
-		value = pattern.search(content)[1]
+		pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)\sdB')
+		value= pattern.search(content)[1]
 		return value
 
