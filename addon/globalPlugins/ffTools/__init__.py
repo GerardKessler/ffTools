@@ -43,6 +43,9 @@ def getFilePath():
 	targetFile= focusedItem.path
 	return targetFile
 
+# url de descarga de los archivos ffmpeg
+DL_URL= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
+# Ruta del complemento
 MAINPATH= os.path.dirname(__file__)
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
@@ -52,14 +55,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.check= False
 		self.switch= False
 		self.percent= 0
+		self.ffplay_file= os.path.join(MAINPATH, 'bin', 'ffplay.exe')
+		self.ffmpeg_file= os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')
+		self.ffprobe_file= os.path.join(MAINPATH, 'bin', 'ffprobe.exe')
 		self.verify()
 
 	def verify(self):
-		if not os.path.isdir(os.path.join(MAINPATH, 'bin')): os.mkdir(os.path.join(MAINPATH, 'bin'))
-		if os.path.isfile(os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')):
-			if os.path.isfile(os.path.join(MAINPATH, 'bin', 'ffplay.exe')):
-				self.check= True
-				return
+		if os.path.isdir(os.path.join(MAINPATH, 'bin')):
+			self.check= True
+			return
 		Thread(target= self.filesDownload, daemon= True).start()
 
 	def __call__(self, block_num, block_size, total_size):
@@ -74,13 +78,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def filesDownload(self):
 		modal= wx.MessageDialog(None, _('Es necesario descargar los binarios de FFMPEG. ¿Quieres hacerlo ahora?'), _('Importante:'), wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION)
 		if modal.ShowModal() == wx.ID_YES:
-			# wx.MessageDialog(None, _('Descargando los archivos. Puede seguir trabajando con su pc. Se le notificará al finalizar el proceso'), _('ffTools:'), wx.OK).ShowModal()
-			url= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
 			pattern= compile(r'href=[\"\'](https://github.com/yt\-dlp/FFmpeg\-Builds/releases/download/autobuild[\d\-]+/(ffmpeg\-n[\d\w\.\-]+zip))[\"\']')
 			try:
 				socket.setdefaulttimeout(30) # Error si pasan 30 segundos sin internet
 				try:
-					content= request.urlopen(url).read().decode('utf-8')
+					content= request.urlopen(DL_URL).read().decode('utf-8')
 				except:
 					wx.MessageDialog(None, _('Error en la conexión. Por favor compruebe su conexión a internet y vuelva a intentarlo en unos minutos'), _('ffTools:'), wx.OK).ShowModal()
 					return
@@ -89,18 +91,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 					return
 			result= pattern.search(content)
 			url_dl= result[1]
-			request.urlretrieve(result[1], os.path.join(MAINPATH, 'bin', 'ffmpeg_temp.zip'), reporthook= self.__call__)
+			request.urlretrieve(result[1], os.path.join(MAINPATH, 'ffmpeg_temp.zip'), reporthook= self.__call__)
 			self.extractFiles()
 
 	def extractFiles(self):
-		zip_file= zipfile.ZipFile(os.path.join(MAINPATH, 'bin', 'ffmpeg_temp.zip'))
+		zip_file= zipfile.ZipFile(os.path.join(MAINPATH, 'ffmpeg_temp.zip'))
 		root= zip_file.namelist()[0]
-		zip_file.extractall(os.path.join(MAINPATH, 'bin'))
+		zip_file.extractall(MAINPATH)
 		zip_file.close()
-		os.remove(os.path.join(MAINPATH, 'bin', 'ffmpeg_temp.zip'))
-		shutil.move(os.path.join(MAINPATH, 'bin', root, 'bin', 'ffmpeg.exe'), os.path.join(MAINPATH, 'bin', 'ffmpeg.exe'))
-		shutil.move(os.path.join(MAINPATH, 'bin', root, 'bin', 'ffplay.exe'), os.path.join(MAINPATH, 'bin', 'ffplay.exe'))
-		shutil.rmtree(os.path.join(MAINPATH, 'bin', root))
+		os.remove(os.path.join(MAINPATH, 'ffmpeg_temp.zip'))
+		shutil.move(os.path.join(MAINPATH, root, 'bin'), MAINPATH)
+		shutil.rmtree(os.path.join(MAINPATH, root))
 		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), _('ffTools:'), wx.OK).ShowModal()
 
 	def getScript(self, gesture):
@@ -136,9 +137,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		file_path= getFilePath()
 		if file_path:
-			command= f'{os.path.join(MAINPATH, "bin", "ffplay.exe")} "{file_path}"'
-			newProcessing = NewProcessing(file_path)
-			Thread(target= newProcessing.newProcess, args= (command, False), daemon= True).start()
+			command= f'{self.ffplay_file} "{file_path}"'
+			newProcessing = NewProcessing(command, file_path, False)
+			Thread(target= newProcessing.newProcess, daemon= True).start()
 
 	__newGestures= {
 		"kb:space": "preview"
@@ -146,7 +147,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 class NewProcessing():
 
-	def __init__(self, file_path):
+	def __init__(self, command, file_path, hide_console):
+		self.command= command
+		self.file_path= file_path
+		self.hide_console= hide_console
 		self.settings= subprocess.STARTUPINFO()
 		self.settings.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 		self.level= None
@@ -154,11 +158,11 @@ class NewProcessing():
 	def detect(self):
 		out= self.getOut()
 		self.level= self.extractValue(out)
-		print(f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}')
+		wx.MessageDialog(None, f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}', _('Resultado:'), wx.OK).ShowModal()
 
 	def volume(self):
 		new_level= float(self.level) + 1.0
-		print(f'Aumentando el volúmen del archivo en {new_level} DB')
+		message(f'Aumentando el volúmen del archivo en {new_level} DB')
 		self.newProcess(str(new_level))
 
 	def getOut(self):
@@ -167,12 +171,13 @@ class NewProcessing():
 		content= str(out.stderr.read())
 		return content
 
-	def newProcess(self, command, hide_console):
+	def newProcess(self):
 		# command= f'{os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')} -i "{self.file_path}" -af volume= {new_level}dB:precision= fixed "{os.path.splitext(self.file_path)[0]}-f.mp3"'
-		if hide_console:
-			subprocess.Popen(command, startupinfo= self.settings)
+		if self.hide_console:
+			subprocess.Popen(self.command, startupinfo= self.settings)
+			wx.MessageDialog(None, _('Proceso finalizado'), _('ffTools'), wx.OK).ShowModal()
 		else:
-			subprocess.run(command)
+			subprocess.run(self.command)
 
 	def extractValue(self, content):
 		pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)\sdB')
