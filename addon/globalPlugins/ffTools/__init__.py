@@ -59,6 +59,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.ffmpeg_file= os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')
 		self.ffprobe_file= os.path.join(MAINPATH, 'bin', 'ffprobe.exe')
 		self.verify()
+		self.volume_bar= 0
+		self.format_list= [".mp3", ".ogg", ".flac", ".wav", ".mp4", ".avi", ".mkv"]
 
 	def verify(self):
 		if os.path.isdir(os.path.join(MAINPATH, 'bin')):
@@ -113,8 +115,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
 
-	def finish(self):
-		beep(220,10)
+	def finish(self, sound= True):
+		if sound: beep(220,10)
 		self.switch= False
 		self.clearGestureBindings()
 		self.bindGestures(self.__gestures)
@@ -123,7 +125,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		category= 'ffTools',
 		# Translators: Descripción del comando en el diálogo gestos de entrada
 		description= _('Activa la capa de comandos'),
-		gesture= 'kb:NVDA+control+f'
+		gesture= 'kb:NVDA+shift+f'
 	)
 	def script_commandLayer(self, gesture):
 		beep(880,5)
@@ -131,24 +133,114 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.switch= True
 
 	def script_preview(self, gesture):
-		self.finish()
+		self.finish(False)
 		if not self.check:
 			self.verify()
 			return
 		file_path= getFilePath()
 		if file_path:
 			command= f'{self.ffplay_file} "{file_path}"'
-			newProcessing = NewProcessing(command, file_path, False)
-			Thread(target= newProcessing.newProcess, daemon= True).start()
+			newProcessing= NewProcessing(command, None, file_path, False)
+			Thread(target=newProcessing.newProcess, daemon= True).start()
+
+	def script_volumeDetect(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.verify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			newProcessing = NewProcessing(None, self.ffmpeg_file, file_path, False)
+			Thread(target= newProcessing.detect, daemon= True).start()
+
+	def script_formatChange(self, gesture):
+		self.bindGestures(self.__formatGestures)
+		message("selecciona el formato con flechas arriba y abajo y pulsa intro")
+
+	def script_volumeChange(self, gesture):
+		self.bindGestures(self.__volumeGestures)
+		message("selecciona el volúmen con flechas arriba y abajo y pulsa intro")
+
+	def script_upVolume(self, gesture):
+		self.volume_bar+=0.5
+		message(str(self.volume_bar))
+
+	def script_downVolume(self, gesture):
+		self.volume_bar -= 0.5
+		message(str(self.volume_bar))
+
+	def script_downFormat(self, gesture):
+		self.volume_bar-=1
+		if self.volume_bar >= 0:
+			message(self.format_list[self.volume_bar])
+		else:
+			self.volume_bar= len(self.format_list)-1
+			message(self.format_list[self.volume_bar])
+
+	def script_upFormat(self, gesture):
+		self.volume_bar+=1
+		if self.volume_bar < len(self.format_list):
+			message(self.format_list[self.volume_bar])
+		else:
+			self.volume_bar= 0
+			message(self.format_list[self.volume_bar])
+
+	def script_sendVolume(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.verify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			newProcessing = NewProcessing(None, self.ffmpeg_file, file_path, True)
+			Thread(target=newProcessing.volumeChange, args=(self.volume_bar,), daemon= True).start()
+			self.volume_bar= 0
+
+	def script_sendFormat(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.verify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			if self.format_list[self.volume_bar] == os.path.splitext(file_path)[1]:
+				message('Proceso cancelado. Los formatos de entrada y salida son iguales:)')
+				return
+			command= f'{self.ffmpeg_file} -i "{file_path}" "{os.path.splitext(file_path)[0]}{self.format_list[self.volume_bar]}"'
+			newProcessing = NewProcessing(command, self.ffmpeg_file, file_path, True)
+			Thread(target=newProcessing.formatChange, daemon= True).start()
+			message(f'Cambiando el formato de {os.path.splitext(file_path)[1]} a {self.format_list[self.volume_bar]}')
+			self.volume_bar= 0
+
+	def script_close(self, gesture):
+		self.finish()
 
 	__newGestures= {
-		"kb:space": "preview"
+		"kb:space": "preview",
+		"kb:d": "volumeDetect",
+		"kb:f": "formatChange",
+		"kb:v": "volumeChange"
+	}
+
+	__volumeGestures= {
+		"kb:upArrow":"upVolume",
+		"kb:downArrow":"downVolume",
+		"kb:escape":"close",
+		"kb:enter":"sendVolume"
+	}
+
+	__formatGestures= {
+		"kb:upArrow":"upFormat",
+		"kb:downArrow":"downFormat",
+		"kb:escape":"close",
+		"kb:enter":"sendFormat"
 	}
 
 class NewProcessing():
 
-	def __init__(self, command, file_path, hide_console):
+	def __init__(self, command, executable_path, file_path, hide_console):
 		self.command= command
+		self.executable_path= executable_path
 		self.file_path= file_path
 		self.hide_console= hide_console
 		self.settings= subprocess.STARTUPINFO()
@@ -160,27 +252,33 @@ class NewProcessing():
 		self.level= self.extractValue(out)
 		wx.MessageDialog(None, f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}', _('Resultado:'), wx.OK).ShowModal()
 
-	def volume(self):
-		new_level= float(self.level) + 1.0
-		message(f'Aumentando el volúmen del archivo en {new_level} DB')
-		self.newProcess(str(new_level))
-
 	def getOut(self):
-		command= f'ffmpeg -i "{self.file_path}" -af "volumedetect" -dn -vn -sn -f null /dev/null'
+		command= f'{self.executable_path} -i "{self.file_path}" -af "volumedetect" -dn -vn -sn -f null /dev/null'
 		out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
 		content= str(out.stderr.read())
 		return content
 
-	def newProcess(self):
-		# command= f'{os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')} -i "{self.file_path}" -af volume= {new_level}dB:precision= fixed "{os.path.splitext(self.file_path)[0]}-f.mp3"'
+	def volumeChange(self, value):
+		message(f'Modificando el volúmen del archivo en {value} DB')
+		self.newProcess(value)
+
+	def newProcess(self, value= None):
+		file_path= os.path.splitext(self.file_path)
+		command= f'{self.executable_path} -i "{self.file_path}" -af "volume={value}dB" "{file_path[0]}-x{file_path[1]}"'
 		if self.hide_console:
-			subprocess.Popen(self.command, startupinfo= self.settings)
+			execute= subprocess.Popen(command, startupinfo= self.settings)
+			execute.wait()
 			wx.MessageDialog(None, _('Proceso finalizado'), _('ffTools'), wx.OK).ShowModal()
 		else:
 			subprocess.run(self.command)
 
-	def extractValue(self, content):
-		pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)\sdB')
-		value= pattern.search(content)[1]
-		return value
+	def formatChange(self):
+		execute= subprocess.Popen(self.command, startupinfo= self.settings)
+		execute.wait()
+		wx.MessageDialog(None, _('Proceso finalizado'), _('ffTools'), wx.OK).ShowModal()
 
+	def extractValue(self, content):
+		pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)')
+		value= pattern.search(content)[1]
+		if value:
+			return value
