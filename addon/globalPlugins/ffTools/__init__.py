@@ -155,10 +155,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def script_formatChange(self, gesture):
 		self.bindGestures(self.__formatGestures)
+		self.switch= True
 		message("selecciona el formato con flechas arriba y abajo y pulsa intro")
 
 	def script_volumeChange(self, gesture):
 		self.bindGestures(self.__volumeGestures)
+		self.switch= True
 		message("selecciona el volúmen con flechas arriba y abajo y pulsa intro")
 
 	def script_upVolume(self, gesture):
@@ -214,6 +216,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def script_close(self, gesture):
 		self.finish()
+		message('Cancelado')
 
 	__newGestures= {
 		"kb:space": "preview",
@@ -245,16 +248,23 @@ class NewProcessing():
 		self.hide_console= hide_console
 		self.settings= subprocess.STARTUPINFO()
 		self.settings.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+		self.no_settings= subprocess.STARTUPINFO()
 		self.level= None
 
 	def detect(self):
 		out= self.getOut()
-		self.level= self.extractValue(out)
-		wx.MessageDialog(None, f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}', _('Resultado:'), wx.OK).ShowModal()
+		if out:
+			self.level= self.extractValue(out)
+			wx.MessageDialog(None, f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}', _('Resultado:'), wx.OK).ShowModal()
+		else:
+			message("Se ha producido un error")
 
 	def getOut(self):
 		command= f'{self.executable_path} -i "{self.file_path}" -af "volumedetect" -dn -vn -sn -f null /dev/null'
-		out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+		try:
+			out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+		except OSError:
+			return None
 		content= str(out.stderr.read())
 		return content
 
@@ -270,12 +280,10 @@ class NewProcessing():
 			execute.wait()
 			wx.MessageDialog(None, _('Proceso finalizado'), _('ffTools'), wx.OK).ShowModal()
 		else:
-			subprocess.run(self.command)
+			execute= subprocess.Popen(self.command, startupinfo= self.no_settings)
 
 	def formatChange(self):
 		execute= subprocess.Popen(self.command, startupinfo= self.settings)
-		execute.wait()
-		wx.MessageDialog(None, _('Proceso finalizado'), _('ffTools'), wx.OK).ShowModal()
 
 	def extractValue(self, content):
 		pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)')

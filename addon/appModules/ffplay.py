@@ -11,7 +11,10 @@ class AppModule(appModuleHandler.AppModule):
 
 	def event_NVDAObject_init(self, obj):
 		fg= api.getForegroundObject()
-		file_name= path.splitext(path.split(fg.name)[1])[0]
+		try:
+			file_name= path.splitext(path.split(fg.name)[1])[0]
+		except TypeError:
+			return
 		fc= api.getFocusObject()
 		fg.name= file_name
 		fc.name= file_name
