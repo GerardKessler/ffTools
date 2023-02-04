@@ -60,7 +60,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.ffprobe_file= os.path.join(MAINPATH, 'bin', 'ffprobe.exe')
 		self.verify()
 		self.volume_bar= 0
-		self.format_list= [".mp3", ".ogg", ".flac", ".wav", ".mp4", ".avi", ".mkv"]
+		self.format_list= [".mp3", ".ogg", ".flac", ".wav", ".m4a", ".flv", ".mkv", ".avi", ".mp4"]
 
 	def verify(self):
 		if os.path.isdir(os.path.join(MAINPATH, 'bin')):
@@ -139,9 +139,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		file_path= getFilePath()
 		if file_path:
-			command= f'{self.ffplay_file} "{file_path}"'
+			command= f'{self.ffplay_file} "{file_path}" -window_title {os.path.splitext(os.path.split(file_path)[1])[0]}'
 			newProcessing= NewProcessing(command, None, file_path, False)
 			Thread(target=newProcessing.newProcess, daemon= True).start()
+
+	@script(gesture="kb:NVDA+shift+w")
+	def script_extract(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.verify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			newProcessing= NewProcessing(None, self.ffprobe_file, file_path, False)
+			Thread(target=newProcessing.extractTime, args=(self.ffmpeg_file, 'beginning', '03:00'), daemon= True).start()
 
 	def script_volumeDetect(self, gesture):
 		self.finish(False)
@@ -249,13 +260,13 @@ class NewProcessing():
 		self.settings= subprocess.STARTUPINFO()
 		self.settings.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 		self.no_settings= subprocess.STARTUPINFO()
-		self.level= None
+		self.levels= None
 
 	def detect(self):
 		out= self.getOut()
 		if out:
-			self.level= self.extractValue(out)
-			wx.MessageDialog(None, f'{"Volúmen máximo" if float(self.level) == 0.0 else f"Nivel: -{self.level}"}', _('Resultado:'), wx.OK).ShowModal()
+			self.levels= self.extractValue(out)
+			wx.MessageDialog(None, f'Pico máximo: -{self.levels[1]}\n Nivel medio: -{self.levels[0]}', _('Resultado:'), wx.OK).ShowModal()
 		else:
 			message("Se ha producido un error")
 
@@ -264,7 +275,8 @@ class NewProcessing():
 		try:
 			out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
 		except OSError:
-			return None
+			out= subprocess.Popen('taskkill /f /im cmd.exe', stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+			out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
 		content= str(out.stderr.read())
 		return content
 
@@ -286,7 +298,32 @@ class NewProcessing():
 		execute= subprocess.Popen(self.command, startupinfo= self.settings)
 
 	def extractValue(self, content):
-		pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)')
-		value= pattern.search(content)[1]
-		if value:
-			return value
+		max_volume_pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)')
+		mean_volume_pattern= compile(r'mean_volume:\s+\-?(\d+\.\d+)')
+		max_volume= max_volume_pattern.search(content)[1]
+		mean_volume= mean_volume_pattern.search(content)[1]
+		if mean_volume and max_volume:
+			return mean_volume, max_volume
+
+	def extractTime(self, ffmpeg, type_cut, start_time= None, finish_time= None):
+		if type_cut == 'beginning':
+			file_path= os.path.splitext(self.file_path)
+			cut_command= f'{ffmpeg} -i "{self.file_path}" -ss {start_time} "{file_path[0]}-c{file_path[1]}"'
+			try:
+				out= subprocess.Popen(cut_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+			except OSError:
+				subprocess.Popen('taskkill /im /f cmd.exe', stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+				out= subprocess.Popen(cut_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+			out.wait()
+			browseableMessage("Proceso finalizado")
+			return
+		extract_command= f'{self.executable_path} -i "{self.file_path}"'
+		try:
+			out= subprocess.Popen(extract_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+		except OSError:
+			out= subprocess.Popen('taskkill /f /im cmd.exe', stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+			out= subprocess.Popen(extract_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
+		content= str(out.stderr.read())
+		pattern= compile(r'Duration: \d\d:(\d\d:\d\d)\.\d+')
+		value= pattern.search(content)
+		return value[1]
