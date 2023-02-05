@@ -59,7 +59,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.ffmpeg_file= os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')
 		self.ffprobe_file= os.path.join(MAINPATH, 'bin', 'ffprobe.exe')
 		self.verify()
-		self.volume_bar= 0
+		self.value= 0
 		self.format_list= [".mp3", ".ogg", ".flac", ".wav", ".m4a", ".flv", ".mkv", ".avi", ".mp4"]
 
 	def verify(self):
@@ -175,28 +175,28 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		message("selecciona el volúmen con flechas arriba y abajo y pulsa intro")
 
 	def script_upVolume(self, gesture):
-		self.volume_bar+=0.5
-		message(str(self.volume_bar))
+		self.value+=0.5
+		message(str(self.value))
 
 	def script_downVolume(self, gesture):
-		self.volume_bar -= 0.5
-		message(str(self.volume_bar))
+		self.value -= 0.5
+		message(str(self.value))
 
 	def script_downFormat(self, gesture):
-		self.volume_bar-=1
-		if self.volume_bar >= 0:
-			message(self.format_list[self.volume_bar])
+		self.value-=1
+		if self.value >= 0:
+			message(self.format_list[self.value])
 		else:
-			self.volume_bar= len(self.format_list)-1
-			message(self.format_list[self.volume_bar])
+			self.value= len(self.format_list)-1
+			message(self.format_list[self.value])
 
 	def script_upFormat(self, gesture):
-		self.volume_bar+=1
-		if self.volume_bar < len(self.format_list):
-			message(self.format_list[self.volume_bar])
+		self.value+=1
+		if self.value < len(self.format_list):
+			message(self.format_list[self.value])
 		else:
-			self.volume_bar= 0
-			message(self.format_list[self.volume_bar])
+			self.value= 0
+			message(self.format_list[self.value])
 
 	def script_sendVolume(self, gesture):
 		self.finish(False)
@@ -206,8 +206,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		file_path= getFilePath()
 		if file_path:
 			newProcessing = NewProcessing(None, self.ffmpeg_file, file_path, True)
-			Thread(target=newProcessing.volumeChange, args=(self.volume_bar,), daemon= True).start()
-			self.volume_bar= 0
+			Thread(target=newProcessing.volumeChange, args=(self.value,), daemon= True).start()
+			self.value= 0
 
 	def script_sendFormat(self, gesture):
 		self.finish(False)
@@ -216,18 +216,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		file_path= getFilePath()
 		if file_path:
-			if self.format_list[self.volume_bar] == os.path.splitext(file_path)[1]:
+			if self.format_list[self.value] == os.path.splitext(file_path)[1]:
 				message('Proceso cancelado. Los formatos de entrada y salida son iguales:)')
 				return
-			command= f'{self.ffmpeg_file} -i "{file_path}" "{os.path.splitext(file_path)[0]}{self.format_list[self.volume_bar]}"'
+			command= f'{self.ffmpeg_file} -i "{file_path}" "{os.path.splitext(file_path)[0]}{self.format_list[self.value]}"'
 			newProcessing = NewProcessing(command, self.ffmpeg_file, file_path, True)
 			Thread(target=newProcessing.formatChange, daemon= True).start()
-			message(f'Cambiando el formato de {os.path.splitext(file_path)[1]} a {self.format_list[self.volume_bar]}')
-			self.volume_bar= 0
+			message(f'Cambiando el formato de {os.path.splitext(file_path)[1]} a {self.format_list[self.value]}')
+			self.value= 0
 
 	def script_close(self, gesture):
 		self.finish()
 		message('Cancelado')
+		self.value= 0
 
 	__newGestures= {
 		"kb:space": "preview",
