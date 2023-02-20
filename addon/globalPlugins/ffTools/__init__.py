@@ -7,6 +7,7 @@ from threading import Thread
 import subprocess
 from re import compile
 from time import sleep
+from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP
 import os
 from json import load
 import shutil
@@ -21,7 +22,6 @@ import api
 import controlTypes
 from scriptHandler import script
 from ui import message, browseableMessage
-from tones import beep
 
 # # código desarrollado originalmente por Alberto Buffolino para el complemento Column review
 def getFilePath():
@@ -52,7 +52,6 @@ def getFilePath():
 MAIN_PATH= os.path.dirname(__file__)
 MPEG_PATH= os.path.join(MAIN_PATH, 'bin', 'ffmpeg.exe')
 PLAY_PATH= os.path.join(MAIN_PATH, 'bin', 'ffplay.exe')
-PROBE_PATH= os.path.join(MAIN_PATH, 'bin', 'ffprobe.exe')
 DL_URL= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
 with open(os.path.join(MAIN_PATH, 'format.list'), 'r') as list_file:
 	FORMAT_LIST= load(list_file)
@@ -78,15 +77,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def finish(self, sound= True):
 		self.switch= False
-		if sound: beep(220,10)
+		if sound: PlaySound(os.path.join(MAIN_PATH, 'sounds', 'out.wav'), SND_FILENAME)
 		self.clearGestureBindings()
-		self.bindGestures(self.__gestures)
+		# self.bindGestures(self.__gestures)
 
 	def binFilesVerify(self):
 		if os.path.isdir(os.path.join(MAIN_PATH, 'bin')):
 			self.check= True
 			return
-		Thread(target= self.filesDownload, daemon= True).start()
+		THREAD= Thread(target= self.filesDownload, daemon= True)
+		THREAD.start()
 
 	def __call__(self, block_num, block_size, total_size):
 		readsofar= block_num * block_size
@@ -128,14 +128,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	@script(
 		category= 'ffTools',
-		# Translators: Descripción del comando en el diálogo gestos de entrada
-		description= _('Activa la capa de comandos'),
-		gesture= 'kb:NVDA+shift+e'
+		description= 'Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte)',
+		gesture= None
 	)
 	def script_commandLayer(self, gesture):
 		self.bindGestures(self.__newGestures)
 		self.switch= True
-		beep(880,5)
+		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'in.wav'), SND_FILENAME)
 
 	def script_fileModify(self, gesture):
 		self.finish(False)
@@ -161,6 +160,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame.prePopup()
 			cut_dialog.Show()
 
+	@script(
+			category= 'ffTools',
+			description= 'Activa la previsualización del archivo de audio o video con el foco',
+			gesture= None
+	)
 	def script_preview(self, gesture):
 		self.finish(False)
 		if not self.check:
@@ -170,10 +174,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if file_path:
 			command= f'{PLAY_PATH} "{file_path}" -window_title "{os.path.splitext(os.path.split(file_path)[1])[0]}"'
 			newProcessing= NewProcessing(command, False)
-			Thread(target=newProcessing.newProcess, daemon= True).start()
+			THREAD= Thread(target=newProcessing.newProcess, daemon= True)
+			THREAD.start()
 
 	__newGestures= {
-		"kb:space": "preview",
 		"kb:f": "fileModify",
 		"kb:c": "fileCut"
 	}
@@ -186,58 +190,19 @@ class NewProcessing():
 
 	def newProcess(self):
 		if self.hide_console:
-			message('Proceso iniciado')
-			execute= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-			stdout, stderr= execute.communicate()
-			execute.stdin.close()
-			execute.stdout.close()
-			execute.stderr.close()
+			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | snd_async)
+			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+			stdout, stderr= PROCESS.communicate()
+			PROCESS.stdin.close()
+			PROCESS.stdout.close()
+			PROCESS.stderr.close()
+			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'finish.wav'), SND_FILENAME)
 		else:
-			process= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-			stdout, stderr= process.communicate()
-			process.stdin.close()
-			process.stdout.close()
-			process.stderr.close()
-		message('Proceso Finalizado')
-import wx
-
-class Ventana(wx.Frame):
-    def __init__(self, parent, title):
-        super(Ventana, self).__init__(parent, title=title, size=(300, 200))
-
-        # Crear un panel para la ventana
-        panel = wx.Panel(self)
-
-        # Crear la casilla de verificación
-        self.checkbox = wx.CheckBox(panel, label="Normalizar", pos=(20, 20))
-
-        # Desmarcar la casilla de verificación por defecto
-        self.checkbox.SetValue(False)
-
-        # Crear el ListBox con los bitrates de audio
-        self.listbox = wx.ListBox(panel, pos=(20, 50), size=(200, 100))
-        self.listbox.AppendItems(["128 kbps", "192 kbps", "256 kbps", "320 kbps"])
-
-        # Asociar el evento OnCheckBox a la casilla de verificación
-        self.checkbox.Bind(wx.EVT_CHECKBOX, self.OnCheckBox)
-
-        # Mostrar la ventana
-        self.Show(True)
-
-    def OnCheckBox(self, event):
-        if self.checkbox.GetValue():
-            # Si la casilla está marcada, ocultar el ListBox
-            self.listbox.Hide()
-        else:
-            # Si la casilla está desmarcada, mostrar el ListBox
-            self.listbox.Show()
-        # Actualizar la ventana para que se muestren los cambios
-        self.Layout()
-
-if __name__ == '__main__':
-    app = wx.App()
-    Ventana(None, title='Ejemplo de ventana con casilla de verificación y ListBox')
-    app.MainLoop()
+			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+			stdout, stderr= PROCESS.communicate()
+			PROCESS.stdin.close()
+			PROCESS.stdout.close()
+			PROCESS.stderr.close()
 
 class ModifyDialog(wx.Dialog):
 	def __init__(self, parent, title, file_path, file_name):
@@ -250,7 +215,7 @@ class ModifyDialog(wx.Dialog):
 		name_label= wx.StaticText(self, wx.ID_ANY, _("Nombre del archivo saliente"))
 		sizer_1.Add(name_label, 0, 0, 0)
 
-		self.out_name = wx.TextCtrl(self, wx.ID_ANY, f'{self.file_name}-mod')
+		self.out_name = wx.TextCtrl(self, wx.ID_ANY, f'{self.file_name}-m')
 		sizer_1.Add(self.out_name, 0, 0, 0)
 
 		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
@@ -310,11 +275,12 @@ class ModifyDialog(wx.Dialog):
 			wx.MessageDialog(None, 'El nombre y formato de salida coinciden', 'Proceso Cancelado').ShowModal()
 			return
 		if self.checkbox.GetValue():
-			command= f'{MPEG_PATH} -y -i "{self.file_path}" -acodec {self.format_list.GetStringSelection()[1:]} -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
+			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
 		else:
-			command= f'{MPEG_PATH} -y -i "{self.file_path}" -acodec {self.format_list.GetStringSelection()[1:]} -b:a {self.bitrate_list.GetStringSelection()}k -af "volume={self.volume_list.GetStringSelection()}dB" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
+			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -af "volume={self.volume_list.GetStringSelection()}dB" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
 		newProcessing= NewProcessing(command, True)
-		Thread(target=newProcessing.newProcess, daemon= True).start()
+		THREAD= Thread(target=newProcessing.newProcess, daemon= True)
+		THREAD.start()
 
 	def onCancel(self, event):
 		self.Destroy()
@@ -337,14 +303,29 @@ class CutDialog(wx.Dialog):
 
 		sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
-		start_label= wx.StaticText(self, wx.ID_ANY, 'Inicio')
-		sizer_1.Add(start_label, 0, 0, 0)
+		self.checkbox= wx.CheckBox(self, label='Modificar la velocidad del archivo', pos=(20, 20))
+		sizer_1.Add(self.checkbox, 0, 0, 0)
+		self.checkbox.SetValue(False)
+		self.checkbox.Bind(wx.EVT_CHECKBOX, self.onCheckBox)
+
+		self.rate_label= wx.StaticText(self, wx.ID_ANY, 'Velocidad de salida')
+		sizer_1.Add(self.rate_label, 0, 0, 0)
+		self.rate_label.Hide()
+
+		rate_list= ['2.0', '1.9', '1.8', '1.7', '1.6', '1.5', '1.4', '1.3', '1.2', '1.1', '1.0', '0.9', '0.8', '0.7', '0.6', '0.5', '0.4', '0.3', '0.2', '0.1', '0.0']
+		self.rate_list = wx.ListBox(self, wx.ID_ANY, choices=rate_list)
+		sizer_1.Add(self.rate_list, 0, 0, 0)
+		self.rate_list.SetSelection(10)
+		self.rate_list.Hide()
+
+		self.start_label= wx.StaticText(self, wx.ID_ANY, 'Corte inicial')
+		sizer_1.Add(self.start_label, 0, 0, 0)
 
 		self.start= wx.TextCtrl(self, wx.ID_ANY, '00:00')
 		sizer_1.Add(self.start, 0, 0, 0)
 
-		duration_label= wx.StaticText(self, wx.ID_ANY, f'Final- Total {self.duration}')
-		sizer_1.Add(duration_label, 0, 0, 0)
+		self.end_label= wx.StaticText(self, wx.ID_ANY, f'Corte final- Tiempo total; {self.duration}')
+		sizer_1.Add(self.end_label, 0, 0, 0)
 
 		self.end= wx.TextCtrl(self, wx.ID_ANY, self.duration)
 		sizer_1.Add(self.end, 0, 0, 0)
@@ -369,25 +350,51 @@ class CutDialog(wx.Dialog):
 
 		self.Layout()
 
+	def onCheckBox(self, event):
+		if self.checkbox.GetValue():
+			self.start_label.Hide()
+			self.start.Hide()
+			self.end_label.Hide()
+			self.end.Hide()
+			self.rate_label.Show()
+			self.rate_list.Show()
+		else:
+			self.rate_label.Hide()
+			self.rate_list.Hide()
+			self.start_label.Show()
+			self.start.Show()
+			self.end_label.Show()
+			self.end.Show()
+		self.Layout()
+
 	def onApli(self, event):
 		self.Destroy()
 		root= os.path.split(self.file_path)
 		filename= os.path.splitext(root[1])
-		command= f'{MPEG_PATH} -i "{self.file_path}" -ss {self.start.GetValue()} -to {self.end.GetValue()} -c copy "{root[0]}\\{filename[0]}-cut{filename[1]}"'
-		execute= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-		stdout, stderr= execute.communicate()
-		execute.stdin.close()
-		execute.stdout.close()
-		execute.stderr.close()
+		if self.checkbox.GetValue():
+			command= f'{MPEG_PATH} -i "{self.file_path}" -filter:a "atempo={self.rate_list.GetStringSelection()}" "{root[0]}\\{filename[0]}-v{filename[1]}"'
+		else:
+			command= f'{MPEG_PATH} -i "{self.file_path}" -ss {self.start.GetValue()} -to {self.end.GetValue()} -c copy "{root[0]}\\{filename[0]}-c{filename[1]}"'
+		THREAD= Thread(target=self.executeCommand, args=(command,), daemon= True)
+		THREAD.start()
+
+	def executeCommand(self, command):
+		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
+		PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+		stdout, stderr= PROCESS.communicate()
+		PROCESS.stdin.close()
+		PROCESS.stdout.close()
+		PROCESS.stderr.close()
 		message('Proceso finalizado')
+		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'finish.wav'), SND_FILENAME)
 
 	def onCancel(self, event):
 		self.Destroy()
 
 	def getDuration(self):
 		command= [MPEG_PATH, '-i', self.file_path]
-		output= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-		stdout, stderr= output.communicate()
+		PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+		stdout, stderr= PROCESS.communicate()
 		duration = None
 		for line in stderr.decode('utf-8').split('\n'):
 			if "Duration" in line:
