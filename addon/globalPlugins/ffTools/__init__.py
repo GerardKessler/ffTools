@@ -8,6 +8,7 @@ import subprocess
 from re import compile
 from time import sleep
 import os
+from json import load
 import shutil
 import zipfile
 import gui
@@ -41,12 +42,20 @@ def getFilePath():
 		docPath= '\"' + desktop_path + '\\' + api.getDesktopObject().objectWithFocus().name + '\"'
 		return None
 	targetFile= focusedItem.path
-	return targetFile
+	if os.path.splitext(targetFile)[1] in FORMAT_LIST:
+		return targetFile
+	else:
+		message('Archivo no soportado')
+		return None
 
-# url de descarga de los archivos ffmpeg
+# constantes (url de los binarios, rutas de los binarios ff, ruta del complemento, lista de formatos soportados)
+MAIN_PATH= os.path.dirname(__file__)
+MPEG_PATH= os.path.join(MAIN_PATH, 'bin', 'ffmpeg.exe')
+PLAY_PATH= os.path.join(MAIN_PATH, 'bin', 'ffplay.exe')
+PROBE_PATH= os.path.join(MAIN_PATH, 'bin', 'ffprobe.exe')
 DL_URL= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
-# Ruta del complemento
-MAINPATH= os.path.dirname(__file__)
+with open(os.path.join(MAIN_PATH, 'format.list'), 'r') as list_file:
+	FORMAT_LIST= load(list_file)
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
@@ -54,16 +63,27 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		super(GlobalPlugin, self).__init__()
 		self.check= False
 		self.switch= False
-		self.percent= 0
-		self.ffplay_file= os.path.join(MAINPATH, 'bin', 'ffplay.exe')
-		self.ffmpeg_file= os.path.join(MAINPATH, 'bin', 'ffmpeg.exe')
-		self.ffprobe_file= os.path.join(MAINPATH, 'bin', 'ffprobe.exe')
-		self.verify()
 		self.value= 0
-		self.format_list= [".mp3", ".ogg", ".flac", ".wav", ".m4a", ".flv", ".mkv", ".avi", ".mp4"]
+		self.percent= 0
+		self.binFilesVerify()
 
-	def verify(self):
-		if os.path.isdir(os.path.join(MAINPATH, 'bin')):
+	def getScript(self, gesture):
+		if not self.switch:
+			return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
+		script= globalPluginHandler.GlobalPlugin.getScript(self, gesture)
+		if not script:
+			self.finish()
+			return
+		return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
+
+	def finish(self, sound= True):
+		self.switch= False
+		if sound: beep(220,10)
+		self.clearGestureBindings()
+		self.bindGestures(self.__gestures)
+
+	def binFilesVerify(self):
+		if os.path.isdir(os.path.join(MAIN_PATH, 'bin')):
 			self.check= True
 			return
 		Thread(target= self.filesDownload, daemon= True).start()
@@ -93,238 +113,285 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 					return
 			result= pattern.search(content)
 			url_dl= result[1]
-			request.urlretrieve(result[1], os.path.join(MAINPATH, 'ffmpeg_temp.zip'), reporthook= self.__call__)
+			request.urlretrieve(result[1], os.path.join(MAIN_PATH, 'ffmpeg_temp.zip'), reporthook= self.__call__)
 			self.extractFiles()
 
 	def extractFiles(self):
-		zip_file= zipfile.ZipFile(os.path.join(MAINPATH, 'ffmpeg_temp.zip'))
+		zip_file= zipfile.ZipFile(os.path.join(MAIN_PATH, 'ffmpeg_temp.zip'))
 		root= zip_file.namelist()[0]
-		zip_file.extractall(MAINPATH)
+		zip_file.extractall(MAIN_PATH)
 		zip_file.close()
-		os.remove(os.path.join(MAINPATH, 'ffmpeg_temp.zip'))
-		shutil.move(os.path.join(MAINPATH, root, 'bin'), MAINPATH)
-		shutil.rmtree(os.path.join(MAINPATH, root))
+		os.remove(os.path.join(MAIN_PATH, 'ffmpeg_temp.zip'))
+		shutil.move(os.path.join(MAIN_PATH, root, 'bin'), MAIN_PATH)
+		shutil.rmtree(os.path.join(MAIN_PATH, root))
 		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), _('ffTools:'), wx.OK).ShowModal()
-
-	def getScript(self, gesture):
-		if not self.switch:
-			return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
-		script= globalPluginHandler.GlobalPlugin.getScript(self, gesture)
-		if not script:
-			self.finish()
-			return
-		return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
-
-	def finish(self, sound= True):
-		if sound: beep(220,10)
-		self.switch= False
-		self.clearGestureBindings()
-		self.bindGestures(self.__gestures)
 
 	@script(
 		category= 'ffTools',
 		# Translators: Descripción del comando en el diálogo gestos de entrada
 		description= _('Activa la capa de comandos'),
-		gesture= 'kb:NVDA+shift+f'
+		gesture= 'kb:NVDA+shift+e'
 	)
 	def script_commandLayer(self, gesture):
-		beep(880,5)
 		self.bindGestures(self.__newGestures)
 		self.switch= True
+		beep(880,5)
+
+	def script_fileModify(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.binFilesVerify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			file_name= os.path.split(file_path)[1]
+			modify_dialog= ModifyDialog(gui.mainFrame, file_name, file_path, os.path.splitext(file_name)[0])
+			gui.mainFrame.prePopup()
+			modify_dialog.Show()
+
+	def script_fileCut(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.binFilesVerify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			file_name= os.path.split(file_path)[1]
+			cut_dialog= CutDialog(gui.mainFrame, file_name, file_path, os.path.splitext(file_name)[0])
+			gui.mainFrame.prePopup()
+			cut_dialog.Show()
 
 	def script_preview(self, gesture):
 		self.finish(False)
 		if not self.check:
-			self.verify()
+			self.binFilesVerify()
 			return
 		file_path= getFilePath()
 		if file_path:
-			command= f'{self.ffplay_file} "{file_path}" -window_title {os.path.splitext(os.path.split(file_path)[1])[0]}'
-			newProcessing= NewProcessing(command, None, file_path, False)
+			command= f'{PLAY_PATH} "{file_path}" -window_title "{os.path.splitext(os.path.split(file_path)[1])[0]}"'
+			newProcessing= NewProcessing(command, False)
 			Thread(target=newProcessing.newProcess, daemon= True).start()
-
-	@script(gesture="kb:NVDA+shift+w")
-	def script_extract(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.verify()
-			return
-		file_path= getFilePath()
-		if file_path:
-			newProcessing= NewProcessing(None, self.ffprobe_file, file_path, False)
-			Thread(target=newProcessing.extractTime, args=(self.ffmpeg_file, 'beginning', '03:00'), daemon= True).start()
-
-	def script_volumeDetect(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.verify()
-			return
-		file_path= getFilePath()
-		if file_path:
-			newProcessing = NewProcessing(None, self.ffmpeg_file, file_path, False)
-			Thread(target= newProcessing.detect, daemon= True).start()
-
-	def script_formatChange(self, gesture):
-		self.bindGestures(self.__formatGestures)
-		self.switch= True
-		message("selecciona el formato con flechas arriba y abajo y pulsa intro")
-
-	def script_volumeChange(self, gesture):
-		self.bindGestures(self.__volumeGestures)
-		self.switch= True
-		message("selecciona el volúmen con flechas arriba y abajo y pulsa intro")
-
-	def script_upVolume(self, gesture):
-		self.value+=0.5
-		message(str(self.value))
-
-	def script_downVolume(self, gesture):
-		self.value -= 0.5
-		message(str(self.value))
-
-	def script_downFormat(self, gesture):
-		self.value-=1
-		if self.value >= 0:
-			message(self.format_list[self.value])
-		else:
-			self.value= len(self.format_list)-1
-			message(self.format_list[self.value])
-
-	def script_upFormat(self, gesture):
-		self.value+=1
-		if self.value < len(self.format_list):
-			message(self.format_list[self.value])
-		else:
-			self.value= 0
-			message(self.format_list[self.value])
-
-	def script_sendVolume(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.verify()
-			return
-		file_path= getFilePath()
-		if file_path:
-			newProcessing = NewProcessing(None, self.ffmpeg_file, file_path, True)
-			Thread(target=newProcessing.volumeChange, args=(self.value,), daemon= True).start()
-			self.value= 0
-
-	def script_sendFormat(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.verify()
-			return
-		file_path= getFilePath()
-		if file_path:
-			if self.format_list[self.value] == os.path.splitext(file_path)[1]:
-				message('Proceso cancelado. Los formatos de entrada y salida son iguales:)')
-				return
-			command= f'{self.ffmpeg_file} -i "{file_path}" "{os.path.splitext(file_path)[0]}{self.format_list[self.value]}"'
-			newProcessing = NewProcessing(command, self.ffmpeg_file, file_path, True)
-			Thread(target=newProcessing.formatChange, daemon= True).start()
-			message(f'Cambiando el formato de {os.path.splitext(file_path)[1]} a {self.format_list[self.value]}')
-			self.value= 0
-
-	def script_close(self, gesture):
-		self.finish()
-		message('Cancelado')
-		self.value= 0
 
 	__newGestures= {
 		"kb:space": "preview",
-		"kb:d": "volumeDetect",
-		"kb:f": "formatChange",
-		"kb:v": "volumeChange"
-	}
-
-	__volumeGestures= {
-		"kb:upArrow":"upVolume",
-		"kb:downArrow":"downVolume",
-		"kb:escape":"close",
-		"kb:enter":"sendVolume"
-	}
-
-	__formatGestures= {
-		"kb:upArrow":"upFormat",
-		"kb:downArrow":"downFormat",
-		"kb:escape":"close",
-		"kb:enter":"sendFormat"
+		"kb:f": "fileModify",
+		"kb:c": "fileCut"
 	}
 
 class NewProcessing():
 
-	def __init__(self, command, executable_path, file_path, hide_console):
+	def __init__(self, command, hide_console):
 		self.command= command
-		self.executable_path= executable_path
-		self.file_path= file_path
 		self.hide_console= hide_console
-		self.settings= subprocess.STARTUPINFO()
-		self.settings.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-		self.no_settings= subprocess.STARTUPINFO()
-		self.levels= None
 
-	def detect(self):
-		out= self.getOut()
-		if out:
-			self.levels= self.extractValue(out)
-			wx.MessageDialog(None, f'Pico máximo: -{self.levels[1]}\n Nivel medio: -{self.levels[0]}', _('Resultado:'), wx.OK).ShowModal()
-		else:
-			message("Se ha producido un error")
-
-	def getOut(self):
-		command= f'{self.executable_path} -i "{self.file_path}" -af "volumedetect" -dn -vn -sn -f null /dev/null'
-		try:
-			out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-		except OSError:
-			out= subprocess.Popen('taskkill /f /im cmd.exe', stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-			out= subprocess.Popen(command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-		content= str(out.stderr.read())
-		return content
-
-	def volumeChange(self, value):
-		message(f'Modificando el volúmen del archivo en {value} DB')
-		self.newProcess(value)
-
-	def newProcess(self, value= None):
-		file_path= os.path.splitext(self.file_path)
-		command= f'{self.executable_path} -i "{self.file_path}" -af "volume={value}dB" "{file_path[0]}-x{file_path[1]}"'
+	def newProcess(self):
 		if self.hide_console:
-			execute= subprocess.Popen(command, startupinfo= self.settings)
-			execute.wait()
-			wx.MessageDialog(None, _('Proceso finalizado'), _('ffTools'), wx.OK).ShowModal()
+			message('Proceso iniciado')
+			execute= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+			stdout, stderr= execute.communicate()
+			execute.stdin.close()
+			execute.stdout.close()
+			execute.stderr.close()
 		else:
-			execute= subprocess.Popen(self.command, startupinfo= self.no_settings)
+			process= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+			stdout, stderr= process.communicate()
+			process.stdin.close()
+			process.stdout.close()
+			process.stderr.close()
+		message('Proceso Finalizado')
+import wx
 
-	def formatChange(self):
-		execute= subprocess.Popen(self.command, startupinfo= self.settings)
+class Ventana(wx.Frame):
+    def __init__(self, parent, title):
+        super(Ventana, self).__init__(parent, title=title, size=(300, 200))
 
-	def extractValue(self, content):
-		max_volume_pattern= compile(r'max_volume:\s+\-?(\d+\.\d+)')
-		mean_volume_pattern= compile(r'mean_volume:\s+\-?(\d+\.\d+)')
-		max_volume= max_volume_pattern.search(content)[1]
-		mean_volume= mean_volume_pattern.search(content)[1]
-		if mean_volume and max_volume:
-			return mean_volume, max_volume
+        # Crear un panel para la ventana
+        panel = wx.Panel(self)
 
-	def extractTime(self, ffmpeg, type_cut, start_time= None, finish_time= None):
-		if type_cut == 'beginning':
-			file_path= os.path.splitext(self.file_path)
-			cut_command= f'{ffmpeg} -i "{self.file_path}" -ss {start_time} "{file_path[0]}-c{file_path[1]}"'
-			try:
-				out= subprocess.Popen(cut_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-			except OSError:
-				subprocess.Popen('taskkill /im /f cmd.exe', stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-				out= subprocess.Popen(cut_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-			out.wait()
-			browseableMessage("Proceso finalizado")
+        # Crear la casilla de verificación
+        self.checkbox = wx.CheckBox(panel, label="Normalizar", pos=(20, 20))
+
+        # Desmarcar la casilla de verificación por defecto
+        self.checkbox.SetValue(False)
+
+        # Crear el ListBox con los bitrates de audio
+        self.listbox = wx.ListBox(panel, pos=(20, 50), size=(200, 100))
+        self.listbox.AppendItems(["128 kbps", "192 kbps", "256 kbps", "320 kbps"])
+
+        # Asociar el evento OnCheckBox a la casilla de verificación
+        self.checkbox.Bind(wx.EVT_CHECKBOX, self.OnCheckBox)
+
+        # Mostrar la ventana
+        self.Show(True)
+
+    def OnCheckBox(self, event):
+        if self.checkbox.GetValue():
+            # Si la casilla está marcada, ocultar el ListBox
+            self.listbox.Hide()
+        else:
+            # Si la casilla está desmarcada, mostrar el ListBox
+            self.listbox.Show()
+        # Actualizar la ventana para que se muestren los cambios
+        self.Layout()
+
+if __name__ == '__main__':
+    app = wx.App()
+    Ventana(None, title='Ejemplo de ventana con casilla de verificación y ListBox')
+    app.MainLoop()
+
+class ModifyDialog(wx.Dialog):
+	def __init__(self, parent, title, file_path, file_name):
+		super(ModifyDialog, self).__init__(parent, -1, title=title)
+		self.file_path= file_path
+		self.file_name= file_name
+
+		sizer_1 = wx.BoxSizer(wx.VERTICAL)
+
+		name_label= wx.StaticText(self, wx.ID_ANY, _("Nombre del archivo saliente"))
+		sizer_1.Add(name_label, 0, 0, 0)
+
+		self.out_name = wx.TextCtrl(self, wx.ID_ANY, f'{self.file_name}-mod')
+		sizer_1.Add(self.out_name, 0, 0, 0)
+
+		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
+		sizer_1.Add(format_label, 0, 0, 0)
+
+		format_list= ['.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', 'mpg', 'mov', 'mkv', 'flv']
+		self.format_list = wx.ListBox(self, wx.ID_ANY, choices=format_list)
+		sizer_1.Add(self.format_list, 0, 0, 0)
+		self.format_list.SetSelection(5)
+
+		self.checkbox= wx.CheckBox(self, label='Normalizar el volúmen de audio', pos=(20, 20))
+		sizer_1.Add(self.checkbox, 0, 0, 0)
+		self.checkbox.SetValue(False)
+		self.checkbox.Bind(wx.EVT_CHECKBOX, self.onCheckBox)
+
+		self.volume_label= wx.StaticText(self, wx.ID_ANY, _(u'Volúmen de salida'))
+		sizer_1.Add(self.volume_label, 0, 0, 0)
+
+		volume_list= ['15', '14', '13', '12', '11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0', '-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10', '-11', '-12', '-13', '-14', '-15']
+		self.volume_list = wx.ListBox(self, wx.ID_ANY, choices=volume_list)
+		sizer_1.Add(self.volume_list, 0, 0, 0)
+		self.volume_list.SetSelection(15)
+
+		bitrate_label= wx.StaticText(self, wx.ID_ANY, _("Bitrate de audio"))
+		sizer_1.Add(bitrate_label, 0, 0, 0)
+
+		bitrate_list= ['366', '320', '256', '224', '192', '160', '128', '112', '96']
+
+		self.bitrate_list = wx.ListBox(self, wx.ID_ANY, choices=bitrate_list)
+		sizer_1.Add(self.bitrate_list, 0, 0, 0)
+		self.bitrate_list.SetSelection(6)
+
+		sizer_2 = wx.StdDialogButtonSizer()
+		sizer_1.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+
+		self.apli_button= wx.Button(self, wx.ID_ANY, '&Aplicar')
+		sizer_2.AddButton(self.apli_button)
+		self.apli_button.Bind(wx.EVT_BUTTON, self.onApli)
+
+		self.cancel_button = wx.Button(self, wx.ID_ANY, '&Cancelar')
+		sizer_2.AddButton(self.cancel_button)
+		self.cancel_button.Bind(wx.EVT_BUTTON, self.onCancel)
+
+		sizer_2.Realize()
+
+		self.SetSizer(sizer_1)
+		sizer_1.Fit(self)
+
+		self.SetEscapeId(self.cancel_button.GetId())
+
+		self.Layout()
+
+	def onApli(self, event):
+		self.Destroy()
+		out_path= f'{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}'
+		if out_path == self.file_path:
+			wx.MessageDialog(None, 'El nombre y formato de salida coinciden', 'Proceso Cancelado').ShowModal()
 			return
-		extract_command= f'{self.executable_path} -i "{self.file_path}"'
-		try:
-			out= subprocess.Popen(extract_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-		except OSError:
-			out= subprocess.Popen('taskkill /f /im cmd.exe', stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-			out= subprocess.Popen(extract_command, stdout= subprocess.PIPE, stderr= subprocess.PIPE, startupinfo= self.settings)
-		content= str(out.stderr.read())
-		pattern= compile(r'Duration: \d\d:(\d\d:\d\d)\.\d+')
-		value= pattern.search(content)
-		return value[1]
+		if self.checkbox.GetValue():
+			command= f'{MPEG_PATH} -y -i "{self.file_path}" -acodec {self.format_list.GetStringSelection()[1:]} -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
+		else:
+			command= f'{MPEG_PATH} -y -i "{self.file_path}" -acodec {self.format_list.GetStringSelection()[1:]} -b:a {self.bitrate_list.GetStringSelection()}k -af "volume={self.volume_list.GetStringSelection()}dB" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
+		newProcessing= NewProcessing(command, True)
+		Thread(target=newProcessing.newProcess, daemon= True).start()
+
+	def onCancel(self, event):
+		self.Destroy()
+
+	def onCheckBox(self, event):
+		if self.checkbox.GetValue():
+			self.volume_list.Hide()
+			self.volume_label.Hide()
+		else:
+			self.volume_list.Show()
+			self.volume_label.Show()
+		self.Layout()
+
+class CutDialog(wx.Dialog):
+	def __init__(self, parent, title, file_path, file_name):
+		super(CutDialog, self).__init__(parent, -1, title=title)
+		self.file_path= file_path
+		self.file_name= file_name
+		self.duration= self.getDuration()
+
+		sizer_1 = wx.BoxSizer(wx.VERTICAL)
+
+		start_label= wx.StaticText(self, wx.ID_ANY, 'Inicio')
+		sizer_1.Add(start_label, 0, 0, 0)
+
+		self.start= wx.TextCtrl(self, wx.ID_ANY, '00:00')
+		sizer_1.Add(self.start, 0, 0, 0)
+
+		duration_label= wx.StaticText(self, wx.ID_ANY, f'Final- Total {self.duration}')
+		sizer_1.Add(duration_label, 0, 0, 0)
+
+		self.end= wx.TextCtrl(self, wx.ID_ANY, self.duration)
+		sizer_1.Add(self.end, 0, 0, 0)
+
+		sizer_2 = wx.StdDialogButtonSizer()
+		sizer_1.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+
+		self.apli_button= wx.Button(self, wx.ID_ANY, '&Aplicar')
+		sizer_2.AddButton(self.apli_button)
+		self.apli_button.Bind(wx.EVT_BUTTON, self.onApli)
+
+		self.cancel_button = wx.Button(self, wx.ID_ANY, '&Cancelar')
+		sizer_2.AddButton(self.cancel_button)
+		self.cancel_button.Bind(wx.EVT_BUTTON, self.onCancel)
+
+		sizer_2.Realize()
+
+		self.SetSizer(sizer_1)
+		sizer_1.Fit(self)
+
+		self.SetEscapeId(self.cancel_button.GetId())
+
+		self.Layout()
+
+	def onApli(self, event):
+		self.Destroy()
+		root= os.path.split(self.file_path)
+		filename= os.path.splitext(root[1])
+		command= f'{MPEG_PATH} -i "{self.file_path}" -ss {self.start.GetValue()} -to {self.end.GetValue()} -c copy "{root[0]}\\{filename[0]}-cut{filename[1]}"'
+		execute= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+		stdout, stderr= execute.communicate()
+		execute.stdin.close()
+		execute.stdout.close()
+		execute.stderr.close()
+		message('Proceso finalizado')
+
+	def onCancel(self, event):
+		self.Destroy()
+
+	def getDuration(self):
+		command= [MPEG_PATH, '-i', self.file_path]
+		output= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+		stdout, stderr= output.communicate()
+		duration = None
+		for line in stderr.decode('utf-8').split('\n'):
+			if "Duration" in line:
+				duration= line.split(',')[0].split(': ')[-1]
+				pattern= compile(r'0?0?:?([\d\:]+)\.')
+				duration_format= pattern.search(duration)[1]
+				return duration_format
