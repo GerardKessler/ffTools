@@ -7,7 +7,7 @@ from threading import Thread
 import subprocess
 from re import compile
 from time import sleep
-from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP
+from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
 import os
 from json import load
 import shutil
@@ -160,6 +160,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame.prePopup()
 			cut_dialog.Show()
 
+	def script_batchConversion(self, gesture):
+		self.finish(False)
+		batch_dialog= BatchDialog(gui.mainFrame, 'Conversión por lotes')
+		gui.mainFrame.prePopup()
+		batch_dialog.Show()
+
 	@script(
 			category= 'ffTools',
 			description= 'Activa la previsualización del archivo de audio o video con el foco',
@@ -179,6 +185,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	__newGestures= {
 		"kb:f": "fileModify",
+		"kb:l": "batchConversion",
 		"kb:c": "fileCut"
 	}
 
@@ -190,7 +197,7 @@ class NewProcessing():
 
 	def newProcess(self):
 		if self.hide_console:
-			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | snd_async)
+			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
 			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
 			stdout, stderr= PROCESS.communicate()
 			PROCESS.stdin.close()
@@ -402,3 +409,96 @@ class CutDialog(wx.Dialog):
 				pattern= compile(r'0?0?:?([\d\:]+)\.')
 				duration_format= pattern.search(duration)[1]
 				return duration_format
+
+class BatchDialog(wx.Dialog):
+	def __init__(self, parent, title):
+		super(BatchDialog, self).__init__(parent, -1, title=title)
+		self.files= 'None'
+
+		sizer_1 = wx.BoxSizer(wx.VERTICAL)
+
+		path_label= wx.StaticText(self, wx.ID_ANY, 'Ruta de carpeta')
+		sizer_1.Add(path_label, 0, 0, 0)
+
+		self.path_files= wx.TextCtrl(self, wx.ID_ANY, self.files)
+		sizer_1.Add(self.path_files, 0, 0, 0)
+
+		self.examinar_button= wx.Button(self, wx.ID_ANY, '&Examinar')
+		self.examinar_button.Bind(wx.EVT_BUTTON, self.onExaminar)
+
+		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
+		sizer_1.Add(format_label, 0, 0, 0)
+
+		format_list= ['.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', 'mpg', 'mov', 'mkv', 'flv']
+		self.format_list = wx.ListBox(self, wx.ID_ANY, choices=format_list)
+		sizer_1.Add(self.format_list, 0, 0, 0)
+		self.format_list.SetSelection(5)
+
+		self.checkbox= wx.CheckBox(self, label='Normalizar el volúmen de audio', pos=(20, 20))
+		sizer_1.Add(self.checkbox, 0, 0, 0)
+		self.checkbox.SetValue(False)
+
+		bitrate_label= wx.StaticText(self, wx.ID_ANY, _("Bitrate de audio"))
+		sizer_1.Add(bitrate_label, 0, 0, 0)
+
+		bitrate_list= ['366', '320', '256', '224', '192', '160', '128', '112', '96']
+
+		self.bitrate_list = wx.ListBox(self, wx.ID_ANY, choices=bitrate_list)
+		sizer_1.Add(self.bitrate_list, 0, 0, 0)
+		self.bitrate_list.SetSelection(6)
+
+		sizer_2 = wx.StdDialogButtonSizer()
+		sizer_1.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
+
+		self.apli_button= wx.Button(self, wx.ID_ANY, '&Aplicar')
+		sizer_2.AddButton(self.apli_button)
+		self.apli_button.Bind(wx.EVT_BUTTON, self.onApli)
+
+		self.cancel_button = wx.Button(self, wx.ID_ANY, '&Cancelar')
+		sizer_2.AddButton(self.cancel_button)
+		self.cancel_button.Bind(wx.EVT_BUTTON, self.onCancel)
+
+		sizer_2.Realize()
+
+		self.SetSizer(sizer_1)
+		sizer_1.Fit(self)
+
+		self.SetEscapeId(self.cancel_button.GetId())
+
+		self.Layout()
+
+	def onApli(self, event):
+		self.Hide()
+		elements= os.listdir(self.files)
+		files= [os.path.join(self.files, file) for file in elements if file.endswith(tuple(FORMAT_LIST))]
+		Thread(target=self.execute, args=(files,), daemon=True).start()
+
+	def execute(self, files):
+		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
+		for file in files:
+			out_file= f'{os.path.splitext(file)[0]}{self.format_list.GetStringSelection()}'
+			if self.checkbox.GetValue():
+				command= f'{MPEG_PATH} -y -i "{file}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{out_file}"'
+			else:
+				command= f'{MPEG_PATH} -y -i "{file}" -b:a {self.bitrate_list.GetStringSelection()}k "{out_file}"'
+			PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+			stdout, stderr= PROCESS.communicate()
+			PROCESS.stdin.close()
+			PROCESS.stdout.close()
+			PROCESS.stderr.close()
+		self.Destroy()
+		PlaySound(None, SND_PURGE)
+		wx.MessageDialog(None, 'Proceso finalizado correctamente', '✌').ShowModal()
+
+	def onCancel(self, event):
+		self.Destroy()
+
+	def onExaminar(self, event):
+		Thread(target=self.getPath, daemon= True).start()
+
+	def getPath(self):
+		browse_folder= wx.DirDialog(None, 'Seleccionar la carpeta con los archivos a convertir', style=wx.DD_DEFAULT_STYLE)
+		if browse_folder.ShowModal() == wx.ID_OK:
+			files= browse_folder.GetPath()
+			self.path_files.SetValue(files)
+			self.files= files

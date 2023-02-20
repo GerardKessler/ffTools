@@ -32,4 +32,5 @@ Una vez activada la previsualización, en la ventana de reproducción funcionan 
 
 * f; Activa una ventana que permite modificar el volúmen, el formato del archivo.
 * c; Activa una ventana que permite modificar la velocidad del archivo como recortar el inicio y el final
+* l; Activa una ventana que permite modificar todos los archivos soportados de una carpeta.
 
