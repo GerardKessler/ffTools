@@ -161,6 +161,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def script_batchConversion(self, gesture):
 		self.finish(False)
+		if not self.check:
+			self.binFilesVerify()
+			return
 		batch_dialog= BatchDialog(gui.mainFrame, 'Conversión por lotes')
 		gui.mainFrame.prePopup()
 		batch_dialog.Show()
