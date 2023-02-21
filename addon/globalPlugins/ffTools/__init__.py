@@ -205,15 +205,29 @@ class NewProcessing():
 		self.command= command
 		self.hide_console= hide_console
 
-	def newProcess(self):
+	def newProcess(self, total_seconds= None):
+		value= 0
 		if self.hide_console:
 			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
-			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-			stdout, stderr= PROCESS.communicate()
-			PROCESS.stdin.close()
-			PROCESS.stdout.close()
-			PROCESS.stderr.close()
-			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'finish.wav'), SND_FILENAME)
+			process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
+			pattern = compile(r'time=(\d\d:\d\d:\d\d\.\d\d)')
+			for line in process.stdout:
+				match= pattern.search(line)
+				if match:
+					time_str = match.group(1)
+					h, m, s = time_str.split(':')
+					current_seconds = int(h) * 3600 + int(m) * 60 + float(s)
+					percentage = current_seconds / total_seconds * 100
+					percentage= round(percentage)
+					if percentage >= value+10:
+						message(f'{percentage} porciento')
+						value= percentage
+			process.wait()
+			if process.returncode != 0:
+				message(f'Ha habido un error durante la conversión: {process.returncode}')
+			else:
+				message('La conversión ha terminado correctamente.')
+			PlaySound(None, SND_PURGE)
 		else:
 			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 			stdout, stderr= PROCESS.communicate()
@@ -226,6 +240,7 @@ class ModifyDialog(wx.Dialog):
 		super(ModifyDialog, self).__init__(parent, -1, title=title)
 		self.file_path= file_path
 		self.file_name= file_name
+		self.duration, self.bitrate= self.getFileInfo()
 
 		sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
@@ -256,7 +271,7 @@ class ModifyDialog(wx.Dialog):
 		sizer_1.Add(self.volume_list, 0, 0, 0)
 		self.volume_list.SetSelection(15)
 
-		bitrate_label= wx.StaticText(self, wx.ID_ANY, _(f'Bitrate. Valor original; {self.getBitrate()}'))
+		bitrate_label= wx.StaticText(self, wx.ID_ANY, _(f'Bitrate. Valor original; {self.bitrate}'))
 		sizer_1.Add(bitrate_label, 0, 0, 0)
 
 		bitrate_list= ['366', '320', '256', '224', '192', '160', '128', '112', '96']
@@ -295,8 +310,9 @@ class ModifyDialog(wx.Dialog):
 			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
 		else:
 			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -af "volume={self.volume_list.GetStringSelection()}dB" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
+		tiempo_total= self.getSeconds(self.duration)
 		newProcessing= NewProcessing(command, True)
-		THREAD= Thread(target=newProcessing.newProcess, daemon= True)
+		THREAD= Thread(target=newProcessing.newProcess, args=(tiempo_total,), daemon= True)
 		THREAD.start()
 
 	def onCancel(self, event):
@@ -311,15 +327,28 @@ class ModifyDialog(wx.Dialog):
 			self.volume_label.Show()
 		self.Layout()
 
-	def getBitrate(self):
+	def getFileInfo(self):
 		command= [MPEG_PATH, '-i', self.file_path]
 		PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
 		stdout, stderr= PROCESS.communicate()
 		for line in stderr.decode('utf-8').split('\n'):
 			if "Duration:" in line:
-				pattern= compile(r'bitrate:\s(\d{2,4})\skb/s')
+				pattern= compile(r'Duration:\s0?0?:?([\d\:]+)\.\d.+bitrate:\s(\d{2,4})\skb/s')
 				data= pattern.search(line)
-				return data[1]
+				return data[1], data[2]
+
+	def getSeconds(self, time):
+		try:
+			time= time.split(':')
+			time= [int(t) for t in time]
+		except ValueError:
+			raise ValueError("El formato de la cadena no es válido")
+		if len(time) == 2:
+			return time[0] * 60 + time[1]
+		elif len(time) == 3:
+			return time[0] * 3600 + time[1] * 60 + time[2]
+		else:
+			return None
 
 class CutDialog(wx.Dialog):
 	def __init__(self, parent, title, file_path, file_name):
@@ -339,8 +368,8 @@ class CutDialog(wx.Dialog):
 		sizer_1.Add(self.rate_label, 0, 0, 0)
 		self.rate_label.Hide()
 
-		rate_list= ['2.0', '1.9', '1.8', '1.7', '1.6', '1.5', '1.4', '1.3', '1.2', '1.1', '1.0', '0.9', '0.8', '0.7', '0.6', '0.5', '0.4', '0.3', '0.2', '0.1', '0.0']
-		self.rate_list = wx.ListBox(self, wx.ID_ANY, choices=rate_list)
+		self.rate_dic= {'doble tempo': [2.0, 0.5], '90 porciento más': [1.9, 0.55], '80 porciento más': [1.8, 0.6], '70 porciento más': [1.7, 0.65], '60 porciento más': [1.6, 0.7], '50 porciento más': [1.5, 0.75], '40 porciento más': [1.4, 0.8], '30 porciento más': [1.3, 0.85], '20 porciento más': [1.2, 0.9], '10 porciento más': [1.1, 0.95], 'Tempo actual': [1.0, 1.0], '10 porciento menos': [0.9, 1.2], '20 porciento menos': [0.8, 1.4], '30 porciento menos': [0.7, 1.6], '40 porciento menos': [0.6, 1.8], 'mitad de tempo': [0.5, 2.0]}
+		self.rate_list = wx.ListBox(self, wx.ID_ANY, choices=list(self.rate_dic.keys()))
 		sizer_1.Add(self.rate_list, 0, 0, 0)
 		self.rate_list.SetSelection(10)
 		self.rate_list.Hide()
@@ -398,22 +427,52 @@ class CutDialog(wx.Dialog):
 		root= os.path.split(self.file_path)
 		filename= os.path.splitext(root[1])
 		if self.checkbox.GetValue():
-			command= f'{MPEG_PATH} -i "{self.file_path}" -filter:a "atempo={self.rate_list.GetStringSelection()}" "{root[0]}\\{filename[0]}-v{filename[1]}"'
+			command= f'{MPEG_PATH} -i "{self.file_path}" -filter:a "atempo={self.rate_dic[self.rate_list.GetStringSelection()][0]}" "{root[0]}\\{filename[0]}-v{filename[1]}"'
+			total_seconds= round(self.getSeconds(self.duration) * self.rate_dic[self.rate_list.GetStringSelection()][1])
 		else:
 			command= f'{MPEG_PATH} -i "{self.file_path}" -ss {self.start.GetValue()} -to {self.end.GetValue()} -c copy "{root[0]}\\{filename[0]}-c{filename[1]}"'
-		THREAD= Thread(target=self.executeCommand, args=(command,), daemon= True)
+			start= self.getSeconds(self.start.GetValue())
+			end= self.getSeconds(self.end.GetValue())
+			total_seconds= end - start
+		THREAD= Thread(target=self.executeCommand, args=(command, total_seconds), daemon= True)
 		THREAD.start()
 		self.Destroy()
 
-	def executeCommand(self, command):
+	def executeCommand(self, command, total_seconds):
 		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
-		PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
-		stdout, stderr= PROCESS.communicate()
-		PROCESS.stdin.close()
-		PROCESS.stdout.close()
-		PROCESS.stderr.close()
-		message('Proceso finalizado')
-		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'finish.wav'), SND_FILENAME)
+		value= 0
+		process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
+		pattern = compile(r'time=(\d\d:\d\d:\d\d\.\d\d)')
+		for line in process.stdout:
+			match= pattern.search(line)
+			if match:
+				time_str = match.group(1)
+				h, m, s = time_str.split(':')
+				current_seconds = int(h) * 3600 + int(m) * 60 + float(s)
+				percentage = current_seconds / total_seconds * 100
+				percentage= round(percentage)
+				if percentage >= value+10:
+					message(f'{percentage} porciento')
+					value= percentage
+		process.wait()
+		if process.returncode != 0:
+			message(f'Ha habido un error durante la conversión: {process.returncode}')
+		else:
+			message('La conversión ha terminado correctamente.')
+		PlaySound(None, SND_PURGE)
+
+	def getSeconds(self, time):
+		try:
+			time= time.split(':')
+			time= [int(t) for t in time]
+		except ValueError:
+			raise ValueError("El formato de la cadena no es válido")
+		if len(time) == 2:
+			return time[0] * 60 + time[1]
+		elif len(time) == 3:
+			return time[0] * 3600 + time[1] * 60 + time[2]
+		else:
+			return None
 
 	def onCancel(self, event):
 		self.Destroy()
