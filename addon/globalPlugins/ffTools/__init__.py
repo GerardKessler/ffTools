@@ -123,6 +123,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		os.remove(os.path.join(MAIN_PATH, 'ffmpeg_temp.zip'))
 		shutil.move(os.path.join(MAIN_PATH, root, 'bin'), MAIN_PATH)
 		shutil.rmtree(os.path.join(MAIN_PATH, root))
+		os.remove(os.path.join(MAIN_PATH, 'bin', 'ffprobe.exe'))
 		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), _('ffTools:'), wx.OK).ShowModal()
 		self.check= True
 
