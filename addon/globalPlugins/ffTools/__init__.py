@@ -555,8 +555,10 @@ class BatchDialog(wx.Dialog):
 
 	def execute(self, files):
 		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
+		if not os.path.exists(os.path.join(self.path_files.GetValue(), 'convertidos')):
+			os.makedirs(os.path.join(self.path_files.GetValue(), 'convertidos'))
 		for file in files:
-			out_file= f'{os.path.splitext(file)[0]}{self.format_list.GetStringSelection()}'
+			out_file= f'{os.path.split(file)[0]}\\convertidos\\{os.path.splitext(os.path.split(file)[1])[0]}{self.format_list.GetStringSelection()}'
 			if self.checkbox.GetValue():
 				command= f'{MPEG_PATH} -y -i "{file}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{out_file}"'
 			else:

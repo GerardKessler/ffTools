@@ -58,4 +58,6 @@ Una vez activada la capa de comandos y pulsada la tecla l, se muestra una ventan
 Es importante tener en cuenta que el comando loudnorm solo funciona con archivos de audio en formato mp3 y otros formatos compatibles con ffmpeg.
 * Bitrate: Permite asignar el valor en los formatos soportados.
 
-Todos estos comandos son ejecutados en segundo plano a través de shell. Un sonido suave y constante representa el procesamiento, que culmina con un sonido breve al finalizar.
+
+Los comandos de conversión son ejecutados en segundo plano a través de shell. Un sonido suave y constante representa el procesamiento, al finalizar se activa un diálogo modal que notifica la finalización del proceso.
+Los archivos convertidos se guardan en la carpeta convertidos, dentro del directorio seleccionado.
