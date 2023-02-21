@@ -36,6 +36,15 @@ Una vez activada la previsualización, en la ventana de reproducción funcionan 
 * c; Activa una ventana que permite modificar la velocidad, cortar el inicio y el final del archivo con el foco
 * l; Activa una ventana de conversión por lotes
 
+## Recorte
+
+Al activar la capa de comandos y pulsar la letra c, se activa la ventana de velocidad y recorte.
+Si la casilla de verificación "modificar velocidad del archivo" está marcada, solo se visualiza la lista de porcentajes a seleccionar.
+
+De lo contrario hay disponibles 2 cuadros editables para seleccionar el comienzo y el final del corte. Si se quieren recortar los primeros 10 segundos del archivo, el cuadro debería editarse como 00:10. Es importante respetar el formato de 2 números para los minutos, y 2 para los segundos.
+En el cuadro para el corte final, la etiqueta verbaliza el tiempo total del archivo, lo que también se verá reflejado en el valor del campo.
+Para cortar los últimos 10 segundos del archivo, hay que editar el cuadro escribiendo el valor actual con los segundos restados. Si el archivo tiene una duración de 03:07, debería quedar 02:57.
+
 Conversión por lotes
 
 Esta opción permite convertir todos los archivos soportados por FFMpeg existentes en un directorio.

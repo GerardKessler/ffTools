@@ -466,6 +466,7 @@ class CutDialog(wx.Dialog):
 			time= time.split(':')
 			time= [int(t) for t in time]
 		except ValueError:
+			wx.MessageDialog(None, 'El formato de la cadena no es válido', '😟').ShowModal()
 			raise ValueError("El formato de la cadena no es válido")
 		if len(time) == 2:
 			return time[0] * 60 + time[1]
