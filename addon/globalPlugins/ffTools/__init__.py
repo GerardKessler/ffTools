@@ -235,7 +235,7 @@ class ModifyDialog(wx.Dialog):
 		format_list= ['.aiff', '.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv']
 		self.format_list = wx.ListBox(self, wx.ID_ANY, choices=format_list)
 		sizer_1.Add(self.format_list, 0, 0, 0)
-		self.format_list.SetSelection(5)
+		self.format_list.SetSelection(6)
 
 		self.checkbox= wx.CheckBox(self, label='Normalizar el volúmen de audio', pos=(20, 20))
 		sizer_1.Add(self.checkbox, 0, 0, 0)
@@ -250,7 +250,7 @@ class ModifyDialog(wx.Dialog):
 		sizer_1.Add(self.volume_list, 0, 0, 0)
 		self.volume_list.SetSelection(15)
 
-		bitrate_label= wx.StaticText(self, wx.ID_ANY, _("Bitrate de audio"))
+		bitrate_label= wx.StaticText(self, wx.ID_ANY, _(f'Bitrate. Valor original; {self.getBitrate()}'))
 		sizer_1.Add(bitrate_label, 0, 0, 0)
 
 		bitrate_list= ['366', '320', '256', '224', '192', '160', '128', '112', '96']
@@ -304,6 +304,16 @@ class ModifyDialog(wx.Dialog):
 			self.volume_list.Show()
 			self.volume_label.Show()
 		self.Layout()
+
+	def getBitrate(self):
+		command= [MPEG_PATH, '-i', self.file_path]
+		PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
+		stdout, stderr= PROCESS.communicate()
+		for line in stderr.decode('utf-8').split('\n'):
+			if "Duration:" in line:
+				pattern= compile(r'bitrate:\s(\d{2,4})\skb/s')
+				data= pattern.search(line)
+				return data[1]
 
 class CutDialog(wx.Dialog):
 	def __init__(self, parent, title, file_path, file_name):
@@ -436,7 +446,7 @@ class BatchDialog(wx.Dialog):
 		format_list= ['.aiff', '.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv']
 		self.format_list = wx.ListBox(self, wx.ID_ANY, choices=format_list)
 		sizer_1.Add(self.format_list, 0, 0, 0)
-		self.format_list.SetSelection(5)
+		self.format_list.SetSelection(6)
 
 		self.checkbox= wx.CheckBox(self, label='Normalizar el volúmen de audio', pos=(20, 20))
 		sizer_1.Add(self.checkbox, 0, 0, 0)
