@@ -124,6 +124,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		shutil.move(os.path.join(MAIN_PATH, root, 'bin'), MAIN_PATH)
 		shutil.rmtree(os.path.join(MAIN_PATH, root))
 		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), _('ffTools:'), wx.OK).ShowModal()
+		self.check= True
 
 	@script(
 		category= 'ffTools',
