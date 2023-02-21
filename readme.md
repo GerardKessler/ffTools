@@ -8,7 +8,7 @@ Basado en el programa [ffmpeg](https://ffmpeg.org/)
 
 Descarga de los archivos binarios: <https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest>
 
-Importante: Este programa está basado en los binarios FF, por lo que es fundamental la descarga de estos archivos. El complemento ofrece descargarlos y guardarlos en el lugar correcto, aunque el usuario también puede hacerlo Creando una carpeta 'bin', con los archivos ffmpeg.exe y ffplay.exe en la raíz de la siguiente ruta:
+Importante: Este módulo está basado en los binarios FF, por lo que es fundamental la descarga de estos archivos. El complemento ofrece descargarlos y guardarlos en el lugar correcto, aunque el usuario también puede hacerlo   copiando la carpeta bin con los archivos ffmpeg.exe y ffplay.exe en la raíz del complemento:
 
     %AppData%\nvda\addons\ffTools\globalPlugins\ffTools
 
@@ -22,14 +22,16 @@ Importante: Este programa está basado en los binarios FF, por lo que es fundame
 Una vez activada la previsualización, en la ventana de reproducción funcionan los siguientes comandos:
 
 * Barra espaciadora; pausa y reanuda la reproducción
-* Flecha izquierda; retrocede la línea de tiempo.
-* Flecha derecha; Avanza la línea de tiempo.
+* Avance de página; Reproduce desde el inicio.
+* Flecha izquierda; retrocede en la línea de tiempo.
+* Flecha derecha; Avanza en la línea de tiempo.
 * Flecha arriba; aumenta el volúmen de reproducción.
 * Flecha abajo; disminuye el volúmen de reproducción.
 * Escape; cierra la ventana
 
 ### Capa de comandos
 
+* f1; Abre este documento en el navegador por defecto.
 * f; Activa una ventana que permite modificar el volúmen, el formato, y el bitrate del archivo con el foco 
 * c; Activa una ventana que permite modificar la velocidad, cortar el inicio y el final del archivo con el foco 
 * l; Activa una ventana de conversión en lote

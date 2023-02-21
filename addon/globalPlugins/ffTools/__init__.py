@@ -14,6 +14,7 @@ import shutil
 import zipfile
 import gui
 import globalPluginHandler
+import addonHandler
 from urllib import request
 import socket
 from comtypes.client import CreateObject as COMCreate
@@ -187,7 +188,12 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			THREAD= Thread(target=newProcessing.newProcess, daemon= True)
 			THREAD.start()
 
+	def script_viewReadme(self, gesture):
+		self.finish(False)
+		wx.LaunchDefaultBrowser(f'file://{addonHandler.Addon(os.path.join(MAIN_PATH, "..", "..")).getDocFilePath()}', flags=0)
+
 	__newGestures= {
+		"kb:f1": "viewReadme",
 		"kb:f": "fileModify",
 		"kb:l": "batchConversion",
 		"kb:c": "fileCut"
