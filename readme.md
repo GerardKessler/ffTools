@@ -22,19 +22,19 @@ Importante: Este módulo está basado en los binarios FF, por lo que es fundamen
 Una vez activada la previsualización, en la ventana de reproducción funcionan los siguientes comandos:
 
 * Barra espaciadora; pausa y reanuda la reproducción
-* Avance de página; Reproduce desde el inicio.
-* Flecha izquierda; retrocede en la línea de tiempo.
-* Flecha derecha; Avanza en la línea de tiempo.
-* Flecha arriba; aumenta el volúmen de reproducción.
-* Flecha abajo; disminuye el volúmen de reproducción.
+* Avance de página; Reproduce desde el inicio
+* Flecha izquierda; retrocede en la línea de tiempo
+* Flecha derecha; Avanza en la línea de tiempo
+* Flecha arriba; aumenta el volúmen de reproducción
+* Flecha abajo; disminuye el volúmen de reproducción
 * Escape; cierra la ventana
 
 ### Capa de comandos
 
-* f1; Abre este documento en el navegador por defecto.
-* f; Activa una ventana que permite modificar el volúmen, el formato, y el bitrate del archivo con el foco 
-* c; Activa una ventana que permite modificar la velocidad, cortar el inicio y el final del archivo con el foco 
-* l; Activa una ventana de conversión en lote
+* f1; Abre este documento en el navegador por defecto
+* f; Activa una ventana que permite modificar el volúmen, el formato, y el bitrate del archivo con el foco
+* c; Activa una ventana que permite modificar la velocidad, cortar el inicio y el final del archivo con el foco
+* l; Activa una ventana de conversión por lotes
 
 Conversión por lotes
 
