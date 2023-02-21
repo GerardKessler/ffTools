@@ -27,7 +27,7 @@ addon_info = {
 	# version
 	"addon_version": "1",
 	# Author(s)
-	"addon_author": "Gerardo Kessler [gerardo.kessler@yahoo.com]",
+	"addon_author": "Gerardo Kessler [gera.ar@yahoo.com]",
 	# URL for the add-on documentation support
 	"addon_url": "https://github.com/GerardKessler/ffTools",
 	# URL for the add-on repository where the source code can be found
@@ -37,7 +37,7 @@ addon_info = {
 	# Minimum NVDA version supported (e.g. "2018.3.0", minor version is optional)
 	"addon_minimumNVDAVersion": "2021.3.1",
 	# Last NVDA version supported/tested (e.g. "2018.4.0", ideally more recent than minimum version)
-	"addon_lastTestedNVDAVersion": "2022.4",
+	"addon_lastTestedNVDAVersion": "2023.1",
 	# Add-on update channel (default is None, denoting stable releases,
 	# and for development releases, use "dev".)
 	# Do not change unless you know what you are doing!

@@ -5,6 +5,7 @@
 import wx
 from threading import Thread
 import subprocess
+from datetime import datetime
 from re import compile
 from time import sleep
 from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
@@ -228,7 +229,7 @@ class ModifyDialog(wx.Dialog):
 		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
 		sizer_1.Add(format_label, 0, 0, 0)
 
-		format_list= ['.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', 'mpg', 'mov', 'mkv', 'flv']
+		format_list= ['.aiff', '.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv']
 		self.format_list = wx.ListBox(self, wx.ID_ANY, choices=format_list)
 		sizer_1.Add(self.format_list, 0, 0, 0)
 		self.format_list.SetSelection(5)
@@ -375,7 +376,6 @@ class CutDialog(wx.Dialog):
 		self.Layout()
 
 	def onApli(self, event):
-		self.Destroy()
 		root= os.path.split(self.file_path)
 		filename= os.path.splitext(root[1])
 		if self.checkbox.GetValue():
@@ -384,6 +384,7 @@ class CutDialog(wx.Dialog):
 			command= f'{MPEG_PATH} -i "{self.file_path}" -ss {self.start.GetValue()} -to {self.end.GetValue()} -c copy "{root[0]}\\{filename[0]}-c{filename[1]}"'
 		THREAD= Thread(target=self.executeCommand, args=(command,), daemon= True)
 		THREAD.start()
+		self.Destroy()
 
 	def executeCommand(self, command):
 		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
@@ -429,7 +430,7 @@ class BatchDialog(wx.Dialog):
 		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
 		sizer_1.Add(format_label, 0, 0, 0)
 
-		format_list= ['.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', 'mpg', 'mov', 'mkv', 'flv']
+		format_list= ['.aiff', '.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv']
 		self.format_list = wx.ListBox(self, wx.ID_ANY, choices=format_list)
 		sizer_1.Add(self.format_list, 0, 0, 0)
 		self.format_list.SetSelection(5)
