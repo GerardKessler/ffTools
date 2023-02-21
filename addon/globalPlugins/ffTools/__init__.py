@@ -5,7 +5,6 @@
 import wx
 from threading import Thread
 import subprocess
-from datetime import datetime
 from re import compile
 from time import sleep
 from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
@@ -63,7 +62,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		super(GlobalPlugin, self).__init__()
 		self.check= False
 		self.switch= False
-		self.value= 0
 		self.percent= 0
 		self.binFilesVerify()
 
