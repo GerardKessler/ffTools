@@ -211,23 +211,27 @@ class NewProcessing():
 			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
 			process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
 			pattern = compile(r'time=(\d\d:\d\d:\d\d\.\d\d)')
-			for line in process.stdout:
-				match= pattern.search(line)
-				if match:
-					time_str = match.group(1)
-					h, m, s = time_str.split(':')
-					current_seconds = int(h) * 3600 + int(m) * 60 + float(s)
-					percentage = current_seconds / total_seconds * 100
-					percentage= round(percentage)
-					if percentage >= value+10:
-						message(f'{percentage} porciento')
-						value= percentage
+			try:
+				for line in process.stdout:
+					match= pattern.search(line)
+					if match:
+						time_str = match.group(1)
+						h, m, s = time_str.split(':')
+						current_seconds = int(h) * 3600 + int(m) * 60 + float(s)
+						percentage = current_seconds / total_seconds * 100
+						percentage= round(percentage)
+						if percentage >= value+10:
+							message(f'{percentage} porciento')
+							value= percentage
+				process.wait()
+				if process.returncode != 0:
+					message(f'Ha habido un error durante la conversión: {process.returncode}')
+				else:
+					message('La conversión ha terminado correctamente.')
+			except UnicodeDecodeError:
+				pass
 			process.wait()
-			if process.returncode != 0:
-				message(f'Ha habido un error durante la conversión: {process.returncode}')
-			else:
-				message('La conversión ha terminado correctamente.')
-			PlaySound(None, SND_PURGE)
+			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'out.wav'), SND_FILENAME)
 		else:
 			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 			stdout, stderr= PROCESS.communicate()
