@@ -130,7 +130,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	@script(
 		category= 'ffTools',
-		description= 'Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte)',
+		description= 'Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, conversión por lotes)',
 		gesture= None
 	)
 	def script_commandLayer(self, gesture):
