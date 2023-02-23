@@ -25,7 +25,7 @@ addon_info = {
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
 	"addon_description": _("""Conjunto de erramientas del programa FFMPEG para el manejo de audio y video"""),
 	# version
-	"addon_version": "1",
+	"addon_version": "1.0",
 	# Author(s)
 	"addon_author": "Gerardo Kessler [gera.ar@yahoo.com]",
 	# URL for the add-on documentation support
