@@ -26,6 +26,9 @@ from scriptHandler import script
 from ui import message, browseableMessage
 import globalVars
 
+# Lína de traducción
+addonHandler.initTranslation()
+
 # # código desarrollado originalmente por Alberto Buffolino para el complemento Column review
 def getFilePath():
 	docPath= ""

@@ -9,6 +9,13 @@ import api
 from os import path
 from . import keyFunc
 
+
+def disableInSecureMode(decoratedCls):
+	if globalVars.appArgs.secure:
+		return globalPluginHandler.GlobalPlugin
+	return decoratedCls
+
+@disableInSecureMode
 class AppModule(appModuleHandler.AppModule):
 
 	@script(gesture="kb:downArrow")
