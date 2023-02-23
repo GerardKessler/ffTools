@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2021 Gera Késsler <gera.kessler@gmail.com>
 # This file is covered by the GNU General Public License.
+# This software uses code of FFMpeg. licensed under the LGPLv2.1
 
 import wx
 from threading import Thread
@@ -23,6 +24,7 @@ import api
 import controlTypes
 from scriptHandler import script
 from ui import message, browseableMessage
+import globalVars
 
 # # código desarrollado originalmente por Alberto Buffolino para el complemento Column review
 def getFilePath():
@@ -57,8 +59,13 @@ DL_URL= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
 with open(os.path.join(MAIN_PATH, 'format.list'), 'r') as list_file:
 	FORMAT_LIST= load(list_file)
 
-class GlobalPlugin(globalPluginHandler.GlobalPlugin):
+def disableInSecureMode(decoratedCls):
+	if globalVars.appArgs.secure:
+		return globalPluginHandler.GlobalPlugin
+	return decoratedCls
 
+@disableInSecureMode
+class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def __init__(self, *args, **kwargs):
 		super(GlobalPlugin, self).__init__()
 		self.check= False
@@ -79,7 +86,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.switch= False
 		if sound: PlaySound(os.path.join(MAIN_PATH, 'sounds', 'out.wav'), SND_FILENAME)
 		self.clearGestureBindings()
-		# self.bindGestures(self.__gestures)
 
 	def binFilesVerify(self):
 		if os.path.isdir(os.path.join(MAIN_PATH, 'bin')):
@@ -98,18 +104,21 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			message(f'{percent_format} porciento')
 
 	def filesDownload(self):
+		# Translators: Título y contenido del diálogo de descarga de los archivos binarios
 		modal= wx.MessageDialog(None, _('Es necesario descargar los binarios de FFMPEG. ¿Quieres hacerlo ahora?'), _('Importante:'), wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION)
+		# Translators: Texto del diálogo de error de conexión
+		connection_error= _('Error en la conexión. Por favor compruebe su conexión a internet y vuelva a intentarlo en unos minutos')
 		if modal.ShowModal() == wx.ID_YES:
 			pattern= compile(r'href=[\"\'](https://github.com/yt\-dlp/FFmpeg\-Builds/releases/download/autobuild[\d\-]+/(ffmpeg\-n[\d\w\.\-]+zip))[\"\']')
 			try:
-				socket.setdefaulttimeout(30) # Error si pasan 30 segundos sin internet
+				socket.setdefaulttimeout(30) # Si pasan 30 segundos sin internet
 				try:
 					content= request.urlopen(DL_URL).read().decode('utf-8')
 				except:
-					wx.MessageDialog(None, _('Error en la conexión. Por favor compruebe su conexión a internet y vuelva a intentarlo en unos minutos'), _('ffTools:'), wx.OK).ShowModal()
+					wx.MessageDialog(None, connection_error, 'ffTools:', wx.OK).ShowModal()
 					return
 			except Exception as e:
-					wx.MessageDialog(None, _('Error en la conexión. Por favor compruebe su conexión a internet y vuelva a intentarlo en unos minutos'), _('ffTools:'), wx.OK).ShowModal()
+					wx.MessageDialog(None, connection_error, 'ffTools:', wx.OK).ShowModal()
 					return
 			result= pattern.search(content)
 			url_dl= result[1]
@@ -125,12 +134,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		shutil.move(os.path.join(MAIN_PATH, root, 'bin'), MAIN_PATH)
 		shutil.rmtree(os.path.join(MAIN_PATH, root))
 		os.remove(os.path.join(MAIN_PATH, 'bin', 'ffprobe.exe'))
-		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), _('ffTools:'), wx.OK).ShowModal()
+		# Translators: Contenido del diálogo de correcta finalización de la descarga de los archivos binarios
+		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), 'ffTools:', wx.OK).ShowModal()
 		self.check= True
 
 	@script(
 		category= 'ffTools',
-		description= 'Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, conversión por lotes)',
+		# Translators: Descripción del elemento en el diálogo gestos de entrada
+		description= _('Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, conversión por lotes)'),
 		gesture= None
 	)
 	def script_commandLayer(self, gesture):
@@ -167,13 +178,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		if not self.check:
 			self.binFilesVerify()
 			return
-		batch_dialog= BatchDialog(gui.mainFrame, 'Conversión por lotes')
+		# Translators: Título del diálogo de conversión por lotes
+		batch_dialog= BatchDialog(gui.mainFrame, _('Conversión por lotes'))
 		gui.mainFrame.prePopup()
 		batch_dialog.Show()
 
 	@script(
 			category= 'ffTools',
-			description= 'Activa la previsualización del archivo de audio o video con el foco',
+			# Translators: Descripción en el diálogo gestos de entrada
+			description= _('Activa la previsualización del archivo de audio o video con el foco'),
 			gesture= None
 	)
 	def script_preview(self, gesture):
@@ -221,13 +234,16 @@ class NewProcessing():
 						percentage = current_seconds / total_seconds * 100
 						percentage= round(percentage)
 						if percentage >= value+10:
-							message(f'{percentage} porciento')
+							# Translators: palabra posterior al número de porcentaje
+							message(_('{} porciento').format(percentage))
 							value= percentage
 				process.wait()
 				if process.returncode != 0:
-					message(f'Ha habido un error durante la conversión: {process.returncode}')
+					# Translators: Mensaje de error de conversión
+					message(_('Hubo un error durante la conversión: {}').format(process.returncode))
 				else:
-					message('La conversión ha terminado correctamente.')
+					# Translators: Mensaje de conversión exitosa
+					message(_('La conversión ha finalizado correctamente'))
 			except UnicodeDecodeError:
 				pass
 			process.wait()
@@ -248,13 +264,15 @@ class ModifyDialog(wx.Dialog):
 
 		sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
-		name_label= wx.StaticText(self, wx.ID_ANY, _("Nombre del archivo saliente"))
+		# Translators: Título de la etiqueta del campo nombre
+		name_label= wx.StaticText(self, wx.ID_ANY, _('Nombre del archivo saliente'))
 		sizer_1.Add(name_label, 0, 0, 0)
 
 		self.out_name = wx.TextCtrl(self, wx.ID_ANY, f'{self.file_name}-m')
 		sizer_1.Add(self.out_name, 0, 0, 0)
 
-		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
+		# Translators: Nombre de la lista de formatos
+		format_label= wx.StaticText(self, wx.ID_ANY, _('Formato a convertir'))
 		sizer_1.Add(format_label, 0, 0, 0)
 
 		format_list= ['.aiff', '.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv']
@@ -262,11 +280,13 @@ class ModifyDialog(wx.Dialog):
 		sizer_1.Add(self.format_list, 0, 0, 0)
 		self.format_list.SetSelection(6)
 
-		self.checkbox= wx.CheckBox(self, label='Normalizar el volúmen de audio', pos=(20, 20))
+		# Translators: Etiqueta de la casilla de verificación
+		self.checkbox= wx.CheckBox(self, label=_('Normalizar el volúmen de audio'), pos=(20, 20))
 		sizer_1.Add(self.checkbox, 0, 0, 0)
 		self.checkbox.SetValue(False)
 		self.checkbox.Bind(wx.EVT_CHECKBOX, self.onCheckBox)
 
+		# Translators: Etiqueta de la lista de volúmen
 		self.volume_label= wx.StaticText(self, wx.ID_ANY, _(u'Volúmen de salida'))
 		sizer_1.Add(self.volume_label, 0, 0, 0)
 
@@ -275,7 +295,8 @@ class ModifyDialog(wx.Dialog):
 		sizer_1.Add(self.volume_list, 0, 0, 0)
 		self.volume_list.SetSelection(15)
 
-		bitrate_label= wx.StaticText(self, wx.ID_ANY, _(f'Bitrate. Valor original; {self.bitrate}'))
+		# Translators: Etiqueta de la lista bitrate
+		bitrate_label= wx.StaticText(self, wx.ID_ANY, _('Bitrate. Valor original: {}').format(self.bitrate))
 		sizer_1.Add(bitrate_label, 0, 0, 0)
 
 		bitrate_list= ['366', '320', '256', '224', '192', '160', '128', '112', '96']
@@ -287,11 +308,13 @@ class ModifyDialog(wx.Dialog):
 		sizer_2 = wx.StdDialogButtonSizer()
 		sizer_1.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
 
-		self.apli_button= wx.Button(self, wx.ID_ANY, '&Aplicar')
+		# Translators: Etiqueta del botón aplicar
+		self.apli_button= wx.Button(self, wx.ID_ANY, _('&Aplicar'))
 		sizer_2.AddButton(self.apli_button)
 		self.apli_button.Bind(wx.EVT_BUTTON, self.onApli)
 
-		self.cancel_button = wx.Button(self, wx.ID_ANY, '&Cancelar')
+		# Translators: Etiqueta del botón cancelar
+		self.cancel_button = wx.Button(self, wx.ID_ANY, _('&Cancelar'))
 		sizer_2.AddButton(self.cancel_button)
 		self.cancel_button.Bind(wx.EVT_BUTTON, self.onCancel)
 
@@ -308,7 +331,8 @@ class ModifyDialog(wx.Dialog):
 		self.Destroy()
 		out_path= f'{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}'
 		if out_path == self.file_path:
-			wx.MessageDialog(None, 'El nombre y formato de salida coinciden', 'Proceso Cancelado').ShowModal()
+			# Translators: título y mensaje del diálogo de coincidencia de entrada y salida
+			wx.MessageDialog(None, _('El nombre y formato de salida coinciden'), _('Proceso Cancelado')).ShowModal()
 			return
 		if self.checkbox.GetValue():
 			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
@@ -346,7 +370,8 @@ class ModifyDialog(wx.Dialog):
 			time= time.split(':')
 			time= [int(t) for t in time]
 		except ValueError:
-			raise ValueError("El formato de la cadena no es válido")
+			# Translators: Texto del raise ValueError
+			raise ValueError(_('El formato de la cadena no es válido'))
 		if len(time) == 2:
 			return time[0] * 60 + time[1]
 		elif len(time) == 3:
@@ -363,28 +388,52 @@ class CutDialog(wx.Dialog):
 
 		sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
-		self.checkbox= wx.CheckBox(self, label='Modificar la velocidad del archivo', pos=(20, 20))
+		# Translators: Texto de la casilla de verificación
+		self.checkbox= wx.CheckBox(self, label=_('Modificar la velocidad del archivo'), pos=(20, 20))
 		sizer_1.Add(self.checkbox, 0, 0, 0)
 		self.checkbox.SetValue(False)
 		self.checkbox.Bind(wx.EVT_CHECKBOX, self.onCheckBox)
 
-		self.rate_label= wx.StaticText(self, wx.ID_ANY, 'Velocidad de salida')
+		# Translators: Texto de la etiqueta de la lista velocidad
+		self.rate_label= wx.StaticText(self, wx.ID_ANY, _('Velocidad de salida'))
 		sizer_1.Add(self.rate_label, 0, 0, 0)
 		self.rate_label.Hide()
 
-		self.rate_dic= {'doble tempo': [2.0, 0.5], '90 porciento más': [1.9, 0.55], '80 porciento más': [1.8, 0.6], '70 porciento más': [1.7, 0.65], '60 porciento más': [1.6, 0.7], '50 porciento más': [1.5, 0.75], '40 porciento más': [1.4, 0.8], '30 porciento más': [1.3, 0.85], '20 porciento más': [1.2, 0.9], '10 porciento más': [1.1, 0.95], 'Tempo actual': [1.0, 1.0], '10 porciento menos': [0.9, 1.2], '20 porciento menos': [0.8, 1.4], '30 porciento menos': [0.7, 1.6], '40 porciento menos': [0.6, 1.8], 'mitad de tempo': [0.5, 2.0]}
+		# Translators: cadenas referentes al porcentaje de velocidad
+		more= _('porciento más')
+		less= _('porciento menos')
+		self.rate_dic= {
+			_('doble tempo'): [2.0, 0.5],
+			'90 {}'.format(more): [1.9, 0.55],
+			'80 {}'.format(more): [1.8, 0.6],
+			'70 {}'.format(more): [1.7, 0.65],
+			'60 {}'.format(more): [1.6, 0.7],
+			'50 {}'.format(more): [1.5, 0.75],
+			'40 {}'.format(more): [1.4, 0.8],
+			'30 {}'.format(more): [1.3, 0.85],
+			'20 {}'.format(more): [1.2, 0.9],
+			'10 {}'.format(more): [1.1, 0.95],
+			_('Tempo actual'): [1.0, 1.0],
+			'10 {}'.format(less): [0.9, 1.2],
+			'20 {}'.format(less): [0.8, 1.4],
+			'30 {}'.format(less): [0.7, 1.6],
+			'40 {}'.format(less): [0.6, 1.8],
+			_('mitad de tempo'): [0.5, 2.0]
+		}
 		self.rate_list = wx.ListBox(self, wx.ID_ANY, choices=list(self.rate_dic.keys()))
 		sizer_1.Add(self.rate_list, 0, 0, 0)
 		self.rate_list.SetSelection(10)
 		self.rate_list.Hide()
 
-		self.start_label= wx.StaticText(self, wx.ID_ANY, 'Corte inicial')
+		# Translators: Texto de la etiqueta del campo corte inicial
+		self.start_label= wx.StaticText(self, wx.ID_ANY, _('Corte inicial'))
 		sizer_1.Add(self.start_label, 0, 0, 0)
 
 		self.start= wx.TextCtrl(self, wx.ID_ANY, '00:00')
 		sizer_1.Add(self.start, 0, 0, 0)
 
-		self.end_label= wx.StaticText(self, wx.ID_ANY, f'Corte final- Tiempo total; {self.duration}')
+		# Translators: Texto de la etiqueta del campo corte final
+		self.end_label= wx.StaticText(self, wx.ID_ANY, _('Corte final- Tiempo total; {}').format(self.duration))
 		sizer_1.Add(self.end_label, 0, 0, 0)
 
 		self.end= wx.TextCtrl(self, wx.ID_ANY, self.duration)
@@ -393,11 +442,13 @@ class CutDialog(wx.Dialog):
 		sizer_2 = wx.StdDialogButtonSizer()
 		sizer_1.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
 
-		self.apli_button= wx.Button(self, wx.ID_ANY, '&Aplicar')
+		# Translators: etiqueta del botón aplicar
+		self.apli_button= wx.Button(self, wx.ID_ANY, _('&Aplicar'))
 		sizer_2.AddButton(self.apli_button)
 		self.apli_button.Bind(wx.EVT_BUTTON, self.onApli)
 
-		self.cancel_button = wx.Button(self, wx.ID_ANY, '&Cancelar')
+		# Translators: Etiqueta del botón cancelar
+		self.cancel_button = wx.Button(self, wx.ID_ANY, _('&Cancelar'))
 		sizer_2.AddButton(self.cancel_button)
 		self.cancel_button.Bind(wx.EVT_BUTTON, self.onCancel)
 
@@ -456,13 +507,16 @@ class CutDialog(wx.Dialog):
 				percentage = current_seconds / total_seconds * 100
 				percentage= round(percentage)
 				if percentage >= value+10:
-					message(f'{percentage} porciento')
+					# Translators: palabra posterior al número de porcentaje
+					message(_('{} porciento').format(percentage))
 					value= percentage
 		process.wait()
 		if process.returncode != 0:
-			message(f'Ha habido un error durante la conversión: {process.returncode}')
+			# Translators: mensaje de error de conversión
+			message(_('Hubo un error durante la conversión: {}').format(process.returncode))
 		else:
-			message('La conversión ha terminado correctamente.')
+			# Translators: Texto del mensaje de conversión exitosa
+			message(_('La conversión ha finalizado correctamente.'))
 		PlaySound(None, SND_PURGE)
 
 	def getSeconds(self, time):
@@ -470,8 +524,10 @@ class CutDialog(wx.Dialog):
 			time= time.split(':')
 			time= [int(t) for t in time]
 		except ValueError:
-			wx.MessageDialog(None, 'El formato de la cadena no es válido', '😟').ShowModal()
-			raise ValueError("El formato de la cadena no es válido")
+			# Translators: texto del diálogo de error de formato
+			format_error= _('El formato de la cadena no es válido')
+			wx.MessageDialog(None, format_error, '😟').ShowModal()
+			raise ValueError(format_error)
 		if len(time) == 2:
 			return time[0] * 60 + time[1]
 		elif len(time) == 3:
@@ -501,16 +557,19 @@ class BatchDialog(wx.Dialog):
 
 		sizer_1 = wx.BoxSizer(wx.VERTICAL)
 
-		path_label= wx.StaticText(self, wx.ID_ANY, 'Ruta de carpeta')
+		# Translators: Etiqueta del campo ruta de carpeta
+		path_label= wx.StaticText(self, wx.ID_ANY, _('Ruta de carpeta'))
 		sizer_1.Add(path_label, 0, 0, 0)
 
 		self.path_files= wx.TextCtrl(self, wx.ID_ANY, self.files)
 		sizer_1.Add(self.path_files, 0, 0, 0)
 
-		self.examinar_button= wx.Button(self, wx.ID_ANY, '&Examinar')
+		# Translators: Etiqueta del botón examinar
+		self.examinar_button= wx.Button(self, wx.ID_ANY, _('&Examinar'))
 		self.examinar_button.Bind(wx.EVT_BUTTON, self.onExaminar)
 
-		format_label= wx.StaticText(self, wx.ID_ANY, _("Formato a convertir"))
+		# Translators: Etiqueta de la lista formato a convertir
+		format_label= wx.StaticText(self, wx.ID_ANY, _('Formato a convertir'))
 		sizer_1.Add(format_label, 0, 0, 0)
 
 		format_list= ['.aiff', '.aac', '.wma', '.ogg', '.wav', '.flac', '.mp3', '.mp4', '.avi', '.wmv', '.mov', '.flv', '.mkv']
@@ -518,11 +577,13 @@ class BatchDialog(wx.Dialog):
 		sizer_1.Add(self.format_list, 0, 0, 0)
 		self.format_list.SetSelection(6)
 
-		self.checkbox= wx.CheckBox(self, label='Normalizar el volúmen de audio', pos=(20, 20))
+		# Translators: Etiqueta de la casilla de verificación de normalizar
+		self.checkbox= wx.CheckBox(self, label=_('Normalizar el volúmen de audio'), pos=(20, 20))
 		sizer_1.Add(self.checkbox, 0, 0, 0)
 		self.checkbox.SetValue(False)
 
-		bitrate_label= wx.StaticText(self, wx.ID_ANY, _("Bitrate de audio"))
+		# Translators: Etiqueta de la lista bitrate
+		bitrate_label= wx.StaticText(self, wx.ID_ANY, _('Bitrate de audio'))
 		sizer_1.Add(bitrate_label, 0, 0, 0)
 
 		bitrate_list= ['366', '320', '256', '224', '192', '160', '128', '112', '96']
@@ -534,11 +595,13 @@ class BatchDialog(wx.Dialog):
 		sizer_2 = wx.StdDialogButtonSizer()
 		sizer_1.Add(sizer_2, 0, wx.ALIGN_RIGHT | wx.ALL, 4)
 
-		self.apli_button= wx.Button(self, wx.ID_ANY, '&Aplicar')
+		# Translators: Etiqueta del botón aplicar
+		self.apli_button= wx.Button(self, wx.ID_ANY, _('&Aplicar'))
 		sizer_2.AddButton(self.apli_button)
 		self.apli_button.Bind(wx.EVT_BUTTON, self.onApli)
 
-		self.cancel_button = wx.Button(self, wx.ID_ANY, '&Cancelar')
+		# Translators: Etiqueta del botón cancelar
+		self.cancel_button = wx.Button(self, wx.ID_ANY, _('&Cancelar'))
 		sizer_2.AddButton(self.cancel_button)
 		self.cancel_button.Bind(wx.EVT_BUTTON, self.onCancel)
 
@@ -560,9 +623,11 @@ class BatchDialog(wx.Dialog):
 	def execute(self, files):
 		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
 		if not os.path.exists(os.path.join(self.path_files.GetValue(), 'convertidos')):
-			os.makedirs(os.path.join(self.path_files.GetValue(), 'convertidos'))
+			# Translators: Nombre de la carpeta de destino
+			folder_name= _('convertidos')
+			os.makedirs(os.path.join(self.path_files.GetValue(), folder_name))
 		for file in files:
-			out_file= f'{os.path.split(file)[0]}\\convertidos\\{os.path.splitext(os.path.split(file)[1])[0]}{self.format_list.GetStringSelection()}'
+			out_file= f'{os.path.split(file)[0]}\\{folder_name}\\{os.path.splitext(os.path.split(file)[1])[0]}{self.format_list.GetStringSelection()}'
 			if self.checkbox.GetValue():
 				command= f'{MPEG_PATH} -y -i "{file}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{out_file}"'
 			else:
@@ -574,7 +639,8 @@ class BatchDialog(wx.Dialog):
 			PROCESS.stderr.close()
 		self.Destroy()
 		PlaySound(None, SND_PURGE)
-		wx.MessageDialog(None, 'Proceso finalizado correctamente', '✌').ShowModal()
+		# Translators: Mensaje de finalización correcta del proceso
+		wx.MessageDialog(None, _('Proceso finalizado correctamente'), '✌').ShowModal()
 
 	def onCancel(self, event):
 		self.Destroy()
@@ -583,7 +649,8 @@ class BatchDialog(wx.Dialog):
 		Thread(target=self.getPath, daemon= True).start()
 
 	def getPath(self):
-		browse_folder= wx.DirDialog(None, 'Seleccionar la carpeta con los archivos a convertir', style=wx.DD_DEFAULT_STYLE)
+		# Translators: Título de la ventana de búsqueda de carpeta
+		browse_folder= wx.DirDialog(None, _('Seleccionar la carpeta con los archivos a convertir'), style=wx.DD_DEFAULT_STYLE)
 		if browse_folder.ShowModal() == wx.ID_OK:
 			files= browse_folder.GetPath()
 			self.path_files.SetValue(files)

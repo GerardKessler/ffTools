@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 # Copyright (C) 2021 Héctor J. Benítez Corredera <xebolax@gmail.com>
 # This file is covered by the GNU General Public License.
-#
 # Codigo obtenido de:
 # https://stackoverflow.com/questions/13564851/how-to-generate-keyboard-events (respuesta 1)
-#
 # Codigos de teclado Microsoft.
 # https://docs.microsoft.com/es-es/windows/win32/inputdev/virtual-key-codes?redirectedfrom=MSDN
+
 import ctypes
 from ctypes import wintypes
 

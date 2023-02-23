@@ -23,7 +23,7 @@ addon_info = {
 	"addon_summary": _("ffTools"),
 	# Add-on description
 	# Translators: Long description to be shown for this add-on on add-on information from add-ons manager
-	"addon_description": _("""Conjunto de erramientas del programa FFMPEG para el manejo de audio y video"""),
+	"addon_description": _("""Conjunto de herramientas del programa ffmpeg para el tratamiento de archivos multimedia"""),
 	# version
 	"addon_version": "1.0",
 	# Author(s)
@@ -31,7 +31,7 @@ addon_info = {
 	# URL for the add-on documentation support
 	"addon_url": "https://github.com/GerardKessler/ffTools",
 	# URL for the add-on repository where the source code can be found
-	"addon_sourceURL": None,
+	"addon_sourceURL": "https://github.com/GerardKessler/ffTools",
 	# Documentation file name
 	"addon_docFileName": "readme.html",
 	# Minimum NVDA version supported (e.g. "2018.3.0", minor version is optional)
@@ -56,7 +56,7 @@ addon_info = {
 # pythonSources = ["addon/globalPlugins/*.py"]
 # For more information on SCons Glob expressions please take a look at:
 # https://scons.org/doc/production/HTML/scons-user/apd.html
-pythonSources = ["addon/globalPlugins/ffTools/__init__.py"]
+pythonSources = ["addon/globalPlugins/ffTools/__init__.py", "addon/appModules/ffplay.py"]
 
 # Files that contain strings for translation. Usually your python sources
 i18nSources = pythonSources + ["buildVars.py"]
