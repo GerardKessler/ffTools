@@ -6,9 +6,9 @@
 import appModuleHandler
 from scriptHandler import script
 import api
+import globalVars
 from os import path
 from . import keyFunc
-
 
 def disableInSecureMode(decoratedCls):
 	if globalVars.appArgs.secure:
