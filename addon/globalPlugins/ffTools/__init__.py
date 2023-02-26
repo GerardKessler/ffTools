@@ -104,7 +104,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.switch= False
 		if sound:
 			playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'out.wav'))
-			message(_('Capa de órdenes desactivada'))
+			message(_('Comandos desactivados'))
 		self.clearGestureBindings()
 
 	def binFilesVerify(self):
@@ -167,7 +167,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.bindGestures(self.__newGestures)
 		self.switch= True
 		playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'in.wav'))
-		message(_('Capa de órdenes activada'))
+		message(_('Comandos activados'))
 
 	def script_fileModify(self, gesture):
 		self.finish(False)
