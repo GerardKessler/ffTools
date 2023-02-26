@@ -20,6 +20,7 @@ from urllib import request
 import socket
 from comtypes.client import CreateObject as COMCreate
 
+from nvwave import playWaveFile
 import api
 import controlTypes
 from scriptHandler import script
@@ -95,13 +96,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
 		script= globalPluginHandler.GlobalPlugin.getScript(self, gesture)
 		if not script:
-			self.finish()
+			self.finish(True)
 			return
 		return globalPluginHandler.GlobalPlugin.getScript(self, gesture)
 
 	def finish(self, sound= True):
 		self.switch= False
-		if sound: PlaySound(os.path.join(MAIN_PATH, 'sounds', 'out.wav'), SND_FILENAME)
+		if sound:
+			playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'out.wav'))
+			message(_('Capa de órdenes desactivada'))
 		self.clearGestureBindings()
 
 	def binFilesVerify(self):
@@ -158,13 +161,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@script(
 		category= 'ffTools',
 		# Translators: Descripción del elemento en el diálogo gestos de entrada
-		description= _('Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, conversión por lotes)'),
-		gesture= None
+		description= _('Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, conversión por lotes)')
 	)
 	def script_commandLayer(self, gesture):
 		self.bindGestures(self.__newGestures)
 		self.switch= True
-		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'in.wav'), SND_FILENAME)
+		playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'in.wav'))
+		message(_('Capa de órdenes activada'))
 
 	def script_fileModify(self, gesture):
 		self.finish(False)
@@ -203,8 +206,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	@script(
 			category= 'ffTools',
 			# Translators: Descripción en el diálogo gestos de entrada
-			description= _('Activa la previsualización del archivo de audio o video con el foco'),
-			gesture= None
+			description= _('Activa la previsualización del archivo de audio o video con el foco')
 	)
 	def script_preview(self, gesture):
 		self.finish(False)
@@ -264,7 +266,7 @@ class NewProcessing():
 			except UnicodeDecodeError:
 				pass
 			process.wait()
-			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'out.wav'), SND_FILENAME)
+			playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'out.wav'))
 		else:
 			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 			stdout, stderr= PROCESS.communicate()
@@ -346,6 +348,7 @@ class ModifyDialog(wx.Dialog):
 
 	def onApli(self, event):
 		self.Destroy()
+		gui.mainFrame.postPopup()
 		out_path= f'{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}'
 		if out_path == self.file_path:
 			# Translators: título y mensaje del diálogo de coincidencia de entrada y salida
@@ -362,6 +365,7 @@ class ModifyDialog(wx.Dialog):
 
 	def onCancel(self, event):
 		self.Destroy()
+		gui.mainFrame.postPopup()
 
 	def onCheckBox(self, event):
 		if self.checkbox.GetValue():
@@ -495,6 +499,7 @@ class CutDialog(wx.Dialog):
 		THREAD= Thread(target=self.executeCommand, args=(command, total_seconds), daemon= True)
 		THREAD.start()
 		self.Destroy()
+		gui.mainFrame.postPopup()
 
 	def executeCommand(self, command, total_seconds):
 		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
@@ -524,6 +529,7 @@ class CutDialog(wx.Dialog):
 
 	def onCancel(self, event):
 		self.Destroy()
+		gui.mainFrame.postPopup()
 
 	def getDuration(self):
 		command= [MPEG_PATH, '-i', self.file_path]
@@ -625,12 +631,14 @@ class BatchDialog(wx.Dialog):
 			PROCESS.stdout.close()
 			PROCESS.stderr.close()
 		self.Destroy()
+		gui.mainFrame.postPopup()
 		PlaySound(None, SND_PURGE)
 		# Translators: Mensaje de finalización correcta del proceso
 		gui.messageBox(_('Proceso finalizado correctamente'), '✌')
 
 	def onCancel(self, event):
 		self.Destroy()
+		gui.mainFrame.postPopup()
 
 	def onExaminar(self, event):
 		Thread(target=self.getPath, daemon= True).start()
