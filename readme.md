@@ -45,7 +45,7 @@ De lo contrario hay disponibles 2 cuadros editables para seleccionar el comienzo
 En el cuadro para el corte final, la etiqueta verbaliza el tiempo total del archivo, lo que también se verá reflejado en el valor del campo.
 Para cortar los últimos 10 segundos del archivo, hay que editar el cuadro escribiendo el valor actual con los segundos restados. Si el archivo tiene una duración de 03:07, debería quedar 02:57.
 
-Conversión por lotes
+### Conversión por lotes
 
 Esta opción permite convertir todos los archivos soportados por FFMpeg existentes en un directorio.
 
@@ -63,4 +63,4 @@ Los archivos convertidos se guardan en la carpeta convertidos, dentro del direct
 
 ### Licencias de terceros
 
-[git/FFMpeg git summary]https://git.ffmpeg.org/ffmpeg.git
+[git/FFMpeg git summary](https://git.ffmpeg.org/ffmpeg.git)

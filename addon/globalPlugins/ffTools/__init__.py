@@ -29,6 +29,14 @@ import globalVars
 # Lína de traducción
 addonHandler.initTranslation()
 
+# constantes (url de los binarios, rutas de los binarios ff, ruta del complemento, lista de formatos soportados)
+MAIN_PATH= os.path.dirname(__file__)
+MPEG_PATH= os.path.join(MAIN_PATH, 'bin', 'ffmpeg.exe')
+PLAY_PATH= os.path.join(MAIN_PATH, 'bin', 'ffplay.exe')
+DL_URL= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
+with open(os.path.join(MAIN_PATH, 'format.list'), 'r') as list_file:
+	FORMAT_LIST= load(list_file)
+
 # # código desarrollado originalmente por Alberto Buffolino para el complemento Column review
 def getFilePath():
 	docPath= ""
@@ -54,13 +62,19 @@ def getFilePath():
 		message('Archivo no soportado')
 		return None
 
-# constantes (url de los binarios, rutas de los binarios ff, ruta del complemento, lista de formatos soportados)
-MAIN_PATH= os.path.dirname(__file__)
-MPEG_PATH= os.path.join(MAIN_PATH, 'bin', 'ffmpeg.exe')
-PLAY_PATH= os.path.join(MAIN_PATH, 'bin', 'ffplay.exe')
-DL_URL= 'https://github.com/yt-dlp/FFmpeg-Builds/wiki/Latest'
-with open(os.path.join(MAIN_PATH, 'format.list'), 'r') as list_file:
-	FORMAT_LIST= load(list_file)
+def getSeconds(time):
+	try:
+		time= time.split(':')
+		time= [int(t) for t in time]
+	except ValueError:
+		# Translators: Texto del raise ValueError
+		raise ValueError(_('El formato de la cadena no es válido'))
+	if len(time) == 2:
+		return time[0] * 60 + time[1]
+	elif len(time) == 3:
+		return time[0] * 3600 + time[1] * 60 + time[2]
+	else:
+		return None
 
 def disableInSecureMode(decoratedCls):
 	if globalVars.appArgs.secure:
@@ -107,10 +121,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			message(f'{percent_format} porciento')
 
 	def filesDownload(self):
-		# Translators: Título y contenido del diálogo de descarga de los archivos binarios
-		modal= wx.MessageDialog(None, _('Es necesario descargar los binarios de FFMPEG. ¿Quieres hacerlo ahora?'), _('Importante:'), wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION)
 		# Translators: Texto del diálogo de error de conexión
 		connection_error= _('Error en la conexión. Por favor compruebe su conexión a internet y vuelva a intentarlo en unos minutos')
+		# Translators: Título y contenido del diálogo de descarga de los archivos binarios
+		modal= wx.MessageDialog(None, _('Es necesario descargar los binarios de FFMPEG. ¿Quieres hacerlo ahora?'), _('Importante:'), wx.YES_NO | wx.YES_DEFAULT | wx.ICON_QUESTION)
 		if modal.ShowModal() == wx.ID_YES:
 			pattern= compile(r'href=[\"\'](https://github.com/yt\-dlp/FFmpeg\-Builds/releases/download/autobuild[\d\-]+/(ffmpeg\-n[\d\w\.\-]+zip))[\"\']')
 			try:
@@ -118,10 +132,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 				try:
 					content= request.urlopen(DL_URL).read().decode('utf-8')
 				except:
-					wx.MessageDialog(None, connection_error, 'ffTools:', wx.OK).ShowModal()
+					gui.messageBox(connection_error, 'ffTools:', wx.OK)
 					return
 			except Exception as e:
-					wx.MessageDialog(None, connection_error, 'ffTools:', wx.OK).ShowModal()
+					gui.messageBox(connection_error, 'ffTools:', wx.OK)
 					return
 			result= pattern.search(content)
 			url_dl= result[1]
@@ -138,7 +152,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		shutil.rmtree(os.path.join(MAIN_PATH, root))
 		os.remove(os.path.join(MAIN_PATH, 'bin', 'ffprobe.exe'))
 		# Translators: Contenido del diálogo de correcta finalización de la descarga de los archivos binarios
-		wx.MessageDialog(None, _('El proceso ha finalizado correctamente'), 'ffTools:', wx.OK).ShowModal()
+		gui.messageBox(_('El proceso ha finalizado correctamente'), 'ffTools:', wx.OK)
 		self.check= True
 
 	@script(
@@ -335,13 +349,13 @@ class ModifyDialog(wx.Dialog):
 		out_path= f'{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}'
 		if out_path == self.file_path:
 			# Translators: título y mensaje del diálogo de coincidencia de entrada y salida
-			wx.MessageDialog(None, _('El nombre y formato de salida coinciden'), _('Proceso Cancelado')).ShowModal()
+			gui.messageBox(_('El nombre y formato de salida coinciden'), _('Proceso Cancelado'))
 			return
 		if self.checkbox.GetValue():
 			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -filter:a "loudnorm=I=-16:LRA=11:TP=-0.1" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
 		else:
 			command= f'{MPEG_PATH} -y -i "{self.file_path}" -b:a {self.bitrate_list.GetStringSelection()}k -af "volume={self.volume_list.GetStringSelection()}dB" "{os.path.split(self.file_path)[0]}\\{self.out_name.GetValue()}{self.format_list.GetStringSelection()}"'
-		tiempo_total= self.getSeconds(self.duration)
+		tiempo_total= getSeconds(self.duration)
 		newProcessing= NewProcessing(command, True)
 		THREAD= Thread(target=newProcessing.newProcess, args=(tiempo_total,), daemon= True)
 		THREAD.start()
@@ -367,20 +381,6 @@ class ModifyDialog(wx.Dialog):
 				pattern= compile(r'Duration:\s0?0?:?([\d\:]+)\.\d.+bitrate:\s(\d{2,4})\skb/s')
 				data= pattern.search(line)
 				return data[1], data[2]
-
-	def getSeconds(self, time):
-		try:
-			time= time.split(':')
-			time= [int(t) for t in time]
-		except ValueError:
-			# Translators: Texto del raise ValueError
-			raise ValueError(_('El formato de la cadena no es válido'))
-		if len(time) == 2:
-			return time[0] * 60 + time[1]
-		elif len(time) == 3:
-			return time[0] * 3600 + time[1] * 60 + time[2]
-		else:
-			return None
 
 class CutDialog(wx.Dialog):
 	def __init__(self, parent, title, file_path, file_name):
@@ -486,11 +486,11 @@ class CutDialog(wx.Dialog):
 		filename= os.path.splitext(root[1])
 		if self.checkbox.GetValue():
 			command= f'{MPEG_PATH} -i "{self.file_path}" -filter:a "atempo={self.rate_dic[self.rate_list.GetStringSelection()][0]}" "{root[0]}\\{filename[0]}-v{filename[1]}"'
-			total_seconds= round(self.getSeconds(self.duration) * self.rate_dic[self.rate_list.GetStringSelection()][1])
+			total_seconds= round(getSeconds(self.duration) * self.rate_dic[self.rate_list.GetStringSelection()][1])
 		else:
 			command= f'{MPEG_PATH} -i "{self.file_path}" -ss {self.start.GetValue()} -to {self.end.GetValue()} -c copy "{root[0]}\\{filename[0]}-c{filename[1]}"'
-			start= self.getSeconds(self.start.GetValue())
-			end= self.getSeconds(self.end.GetValue())
+			start= getSeconds(self.start.GetValue())
+			end= getSeconds(self.end.GetValue())
 			total_seconds= end - start
 		THREAD= Thread(target=self.executeCommand, args=(command, total_seconds), daemon= True)
 		THREAD.start()
@@ -522,22 +522,6 @@ class CutDialog(wx.Dialog):
 			message(_('La conversión ha finalizado correctamente.'))
 		PlaySound(None, SND_PURGE)
 
-	def getSeconds(self, time):
-		try:
-			time= time.split(':')
-			time= [int(t) for t in time]
-		except ValueError:
-			# Translators: texto del diálogo de error de formato
-			format_error= _('El formato de la cadena no es válido')
-			wx.MessageDialog(None, format_error, '😟').ShowModal()
-			raise ValueError(format_error)
-		if len(time) == 2:
-			return time[0] * 60 + time[1]
-		elif len(time) == 3:
-			return time[0] * 3600 + time[1] * 60 + time[2]
-		else:
-			return None
-
 	def onCancel(self, event):
 		self.Destroy()
 
@@ -545,9 +529,9 @@ class CutDialog(wx.Dialog):
 		command= [MPEG_PATH, '-i', self.file_path]
 		PROCESS= subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW)
 		stdout, stderr= PROCESS.communicate()
-		duration = None
+		duration= None
 		for line in stderr.decode('utf-8').split('\n'):
-			if "Duration" in line:
+			if "Duration: " in line:
 				duration= line.split(',')[0].split(': ')[-1]
 				pattern= compile(r'0?0?:?([\d\:]+)\.')
 				duration_format= pattern.search(duration)[1]
@@ -643,7 +627,7 @@ class BatchDialog(wx.Dialog):
 		self.Destroy()
 		PlaySound(None, SND_PURGE)
 		# Translators: Mensaje de finalización correcta del proceso
-		wx.MessageDialog(None, _('Proceso finalizado correctamente'), '✌').ShowModal()
+		gui.messageBox(_('Proceso finalizado correctamente'), '✌')
 
 	def onCancel(self, event):
 		self.Destroy()
