@@ -8,7 +8,6 @@ from threading import Thread
 import subprocess
 from re import compile
 from time import sleep
-from winsound import PlaySound, SND_FILENAME, SND_ASYNC, SND_LOOP, SND_PURGE
 import os
 from json import load
 import shutil
@@ -240,7 +239,7 @@ class NewProcessing():
 	def newProcess(self, total_seconds= None):
 		value= 0
 		if self.hide_console:
-			PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
+			playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'))
 			process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
 			pattern = compile(r'time=(\d\d:\d\d:\d\d\.\d\d)')
 			try:
@@ -502,7 +501,7 @@ class CutDialog(wx.Dialog):
 		gui.mainFrame.postPopup()
 
 	def executeCommand(self, command, total_seconds):
-		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
+		playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'))
 		value= 0
 		process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW)
 		pattern = compile(r'time=(\d\d:\d\d:\d\d\.\d\d)')
@@ -525,7 +524,6 @@ class CutDialog(wx.Dialog):
 		else:
 			# Translators: Texto del mensaje de conversión exitosa
 			message(_('La conversión ha finalizado correctamente.'))
-		PlaySound(None, SND_PURGE)
 
 	def onCancel(self, event):
 		self.Destroy()
@@ -614,7 +612,7 @@ class BatchDialog(wx.Dialog):
 		Thread(target=self.execute, args=(files,), daemon=True).start()
 
 	def execute(self, files):
-		PlaySound(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'), SND_LOOP | SND_ASYNC)
+		playWaveFile(os.path.join(MAIN_PATH, 'sounds', 'tictac.wav'))
 		if not os.path.exists(os.path.join(self.path_files.GetValue(), 'convertidos')):
 			# Translators: Nombre de la carpeta de destino
 			folder_name= _('convertidos')
@@ -632,7 +630,6 @@ class BatchDialog(wx.Dialog):
 			PROCESS.stderr.close()
 		self.Destroy()
 		gui.mainFrame.postPopup()
-		PlaySound(None, SND_PURGE)
 		# Translators: Mensaje de finalización correcta del proceso
 		gui.messageBox(_('Proceso finalizado correctamente'), '✌')
 
