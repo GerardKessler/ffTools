@@ -1,0 +1,226 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the 'ffTools' package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 'ffTools' '1.1'\n"
+"Report-Msgid-Bugs-To: 'nvda-translations@groups.io'\n"
+"POT-Creation-Date: 2023-03-03 16:06+0100\n"
+"PO-Revision-Date: 2023-03-04 14:18+0100\n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.8\n"
+"Last-Translator: Rémy Ruiz <remyruiz@gmail.com>\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Language: fr\n"
+
+#. Translators: Texto del raise ValueError
+#: addon\globalPlugins\ffTools\__init__.py:71
+msgid "El formato de la cadena no es válido"
+msgstr "Le format de la chaîne n'est pas valide"
+
+#: addon\globalPlugins\ffTools\__init__.py:106
+msgid "Comandos desactivados"
+msgstr "Commandes désactivées"
+
+#. Translators: Texto del diálogo de error de conexión
+#: addon\globalPlugins\ffTools\__init__.py:127
+msgid ""
+"Error en la conexión. Por favor compruebe su conexión a internet y vuelva a intentarlo en unos minutos"
+msgstr "Erreur de connexion. Veuillez vérifier votre connexion Internet et réessayer dans quelques minutes"
+
+#. Translators: Título y contenido del diálogo de descarga de los archivos binarios
+#: addon\globalPlugins\ffTools\__init__.py:129
+msgid "Es necesario descargar los binarios de FFMPEG. ¿Quieres hacerlo ahora?"
+msgstr "Il est nécessaire de télécharger les binaires de FFMPEG. Voulez-vous le faire maintenant ?"
+
+#: addon\globalPlugins\ffTools\__init__.py:129
+msgid "Importante:"
+msgstr "Important:"
+
+#. Translators: Contenido del diálogo de correcta finalización de la descarga de los archivos binarios
+#: addon\globalPlugins\ffTools\__init__.py:157
+msgid "El proceso ha finalizado correctamente"
+msgstr "Le processus s'est terminé avec succès"
+
+#. Translators: Descripción del elemento en el diálogo gestos de entrada
+#: addon\globalPlugins\ffTools\__init__.py:163
+msgid ""
+"Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, "
+"conversión por lotes)"
+msgstr ""
+"Active les commandes en couche (f, modification du format. c, modification de vitesse et coupe. l, "
+"conversion par lots)"
+
+#: addon\globalPlugins\ffTools\__init__.py:169
+msgid "Comandos activados"
+msgstr "Commandes activées"
+
+#. Translators: Título del diálogo de conversión por lotes
+#: addon\globalPlugins\ffTools\__init__.py:201
+msgid "Conversión por lotes"
+msgstr "Conversion par lots"
+
+#. Translators: Descripción en el diálogo gestos de entrada
+#: addon\globalPlugins\ffTools\__init__.py:208
+msgid "Activa la previsualización del archivo de audio o video con el foco"
+msgstr "Active la prévisualisation du fichier audio ou vidéo focalisé"
+
+#. Translators: palabra posterior al número de porcentaje
+#: addon\globalPlugins\ffTools\__init__.py:256 addon\globalPlugins\ffTools\__init__.py:518
+msgid "{} porciento"
+msgstr "{} pourcent"
+
+#. Translators: Mensaje de error de conversión
+#. Translators: mensaje de error de conversión
+#: addon\globalPlugins\ffTools\__init__.py:261 addon\globalPlugins\ffTools\__init__.py:523
+msgid "Hubo un error durante la conversión: {}"
+msgstr "Il y a eu une erreur pendant la conversion: {}"
+
+#. Translators: Mensaje de conversión exitosa
+#: addon\globalPlugins\ffTools\__init__.py:264
+msgid "La conversión ha finalizado correctamente"
+msgstr "La conversion s'est terminée avec succès"
+
+#. Translators: Título de la etiqueta del campo nombre
+#: addon\globalPlugins\ffTools\__init__.py:286
+msgid "Nombre del archivo saliente"
+msgstr "Nom de fichier sortant"
+
+#. Translators: Nombre de la lista de formatos
+#. Translators: Etiqueta de la lista formato a convertir
+#: addon\globalPlugins\ffTools\__init__.py:293 addon\globalPlugins\ffTools\__init__.py:563
+msgid "Formato a convertir"
+msgstr "Format à convertir"
+
+#. Translators: Etiqueta de la casilla de verificación
+#. Translators: Etiqueta de la casilla de verificación de normalizar
+#: addon\globalPlugins\ffTools\__init__.py:302 addon\globalPlugins\ffTools\__init__.py:572
+msgid "Normalizar el volúmen de audio"
+msgstr "Normaliser le volume audio"
+
+#. Translators: Etiqueta de la lista de volúmen
+#: addon\globalPlugins\ffTools\__init__.py:308
+msgid "Volúmen de salida"
+msgstr "Volume de sortie"
+
+#. Translators: Etiqueta de la lista bitrate
+#: addon\globalPlugins\ffTools\__init__.py:317
+msgid "Bitrate. Valor original: {}"
+msgstr "Bitrate. Valeur originale: {}"
+
+#. Translators: Etiqueta del botón aplicar
+#. Translators: etiqueta del botón aplicar
+#. Translators: Etiqueta del botón aplicar
+#: addon\globalPlugins\ffTools\__init__.py:330 addon\globalPlugins\ffTools\__init__.py:452
+#: addon\globalPlugins\ffTools\__init__.py:590
+msgid "&Aplicar"
+msgstr "&Appliquer"
+
+#. Translators: Etiqueta del botón cancelar
+#: addon\globalPlugins\ffTools\__init__.py:335 addon\globalPlugins\ffTools\__init__.py:457
+#: addon\globalPlugins\ffTools\__init__.py:595
+msgid "&Cancelar"
+msgstr "Ann&uler"
+
+#. Translators: título y mensaje del diálogo de coincidencia de entrada y salida
+#: addon\globalPlugins\ffTools\__init__.py:354
+msgid "El nombre y formato de salida coinciden"
+msgstr "Le nom et le format de sortie coïncide"
+
+#: addon\globalPlugins\ffTools\__init__.py:354
+msgid "Proceso Cancelado"
+msgstr "Processus annulé"
+
+#. Translators: Texto de la casilla de verificación
+#: addon\globalPlugins\ffTools\__init__.py:398
+msgid "Modificar la velocidad del archivo"
+msgstr "Modifier la vitesse du fichier"
+
+#. Translators: Texto de la etiqueta de la lista velocidad
+#: addon\globalPlugins\ffTools\__init__.py:404
+msgid "Velocidad de salida"
+msgstr "Vitesse de sortie"
+
+#. Translators: cadenas referentes al porcentaje de velocidad
+#: addon\globalPlugins\ffTools\__init__.py:409
+msgid "porciento más"
+msgstr "pour cent de plus"
+
+#: addon\globalPlugins\ffTools\__init__.py:410
+msgid "porciento menos"
+msgstr "pour cent de moins"
+
+#: addon\globalPlugins\ffTools\__init__.py:412
+msgid "doble tempo"
+msgstr "double temps"
+
+#: addon\globalPlugins\ffTools\__init__.py:422
+msgid "Tempo actual"
+msgstr "Temps actuel"
+
+#: addon\globalPlugins\ffTools\__init__.py:427
+msgid "mitad de tempo"
+msgstr "mi-temps"
+
+#. Translators: Texto de la etiqueta del campo corte inicial
+#: addon\globalPlugins\ffTools\__init__.py:435
+msgid "Corte inicial"
+msgstr "Coupe initiale"
+
+#. Translators: Texto de la etiqueta del campo corte final
+#: addon\globalPlugins\ffTools\__init__.py:442
+msgid "Corte final- Tiempo total; {}"
+msgstr "Coupe finale- Temps total; {}"
+
+#. Translators: Texto del mensaje de conversión exitosa
+#: addon\globalPlugins\ffTools\__init__.py:526
+msgid "La conversión ha finalizado correctamente."
+msgstr "La conversion s'est terminée avec succès."
+
+#. Translators: Etiqueta del campo ruta de carpeta
+#: addon\globalPlugins\ffTools\__init__.py:552
+msgid "Ruta de carpeta"
+msgstr "Chemin du dossier"
+
+#. Translators: Etiqueta del botón examinar
+#: addon\globalPlugins\ffTools\__init__.py:559
+msgid "&Examinar"
+msgstr "&Parcourir"
+
+#. Translators: Etiqueta de la lista bitrate
+#: addon\globalPlugins\ffTools\__init__.py:577
+msgid "Bitrate de audio"
+msgstr "Bitrate audio"
+
+#. Translators: Nombre de la carpeta de destino
+#: addon\globalPlugins\ffTools\__init__.py:618
+msgid "convertidos"
+msgstr "convertis"
+
+#. Translators: Mensaje de finalización correcta del proceso
+#: addon\globalPlugins\ffTools\__init__.py:634
+msgid "Proceso finalizado correctamente"
+msgstr "Processus terminé avec succès"
+
+#. Translators: Título de la ventana de búsqueda de carpeta
+#: addon\globalPlugins\ffTools\__init__.py:645
+msgid "Seleccionar la carpeta con los archivos a convertir"
+msgstr "Sélectionner le dossier avec les fichiers à convertir"
+
+#. Add-on summary, usually the user visible name of the addon.
+#. Translators: Summary for this add-on
+#. to be shown on installation and add-on information found in Add-ons Manager.
+#: buildVars.py:23
+msgid "ffTools"
+msgstr "ffTools"
+
+#. Add-on description
+#. Translators: Long description to be shown for this add-on on add-on information from add-ons manager
+#: buildVars.py:26
+msgid "Conjunto de herramientas del programa ffmpeg para el tratamiento de archivos multimedia"
+msgstr "Ensemble d'outils du programme ffmpeg pour le traitement des fichiers multimédias"
