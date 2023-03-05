@@ -120,7 +120,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			percent_format= int(percent*1)
 			if percent_format <= (self.percent+10): return
 			self.percent= percent_format
-			message(f'{percent_format} porciento')
+			# Translators: Palabra porciento posterior al número de porcentaje
+			message(_('{} porciento').format(percent_format))
 
 	def filesDownload(self):
 		# Translators: Texto del diálogo de error de conexión
