@@ -210,11 +210,40 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			return
 		file_path= getFilePath()
 		if file_path:
-			dir_path= os.path.dirname(file_path)
-			command= '"{}" -i "{}" -map 0:a:0 "{}\\stream1.mp3"'.format(MPEG_PATH, file_path, dir_path)
-			newProcessing= NewProcessing(command, False)
-			THREAD= Thread(target=newProcessing.newProcess, daemon= True)
-			THREAD.start()
+			dir_path = os.path.dirname(file_path)
+			file_name = os.path.splitext(os.path.basename(file_path))[0]
+			streams = self.numberOfStreams(file_path)
+			if streams == 0:
+					gui.messageBox('Sin pistas de audio para extraer', 'Error')
+					return
+			command = '"{}" -i "{}" '.format(MPEG_PATH, file_path) + self.getPartialCommand(streams,dir_path, file_name)
+			message('Extrayendo {} pistas de audio. Por favor espere...'.format(streams))
+			Thread(target=self.runCommand, args=(command,), daemon=True).start()
+
+	def getPartialCommand(self, streams, dir_path, file_name):
+		os.makedirs('{}\\{}'.format(dir_path, file_name), exist_ok=True)
+		command = ' '.join(f'-map 0:a:{i-1} "{dir_path}\\{file_name}\\stream{i}.mp3"' for i in range(1, streams+1))
+		return command
+
+	def numberOfStreams(self, file_path):
+		process = subprocess.Popen('"{}" -i "{}" -hide_banner'.format(MPEG_PATH, file_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+		out, err = process.communicate()
+		
+		pattern = compile(r'Stream[\s\#\d\w\:\[\]\(\)]+:\sAudio:')
+		result = pattern.findall(err.decode())
+		process.stdout.close()
+		process.stderr.close()
+		process.terminate()
+		return len(result)
+
+	def runCommand(self, command):
+		process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW)
+		process.communicate()
+		process.wait()
+		wx.CallAfter(gui.messageBox, 'Proceso finalizado', 'ffTools')
+		process.stdout.close()
+		process.stderr.close()
+		process.terminate()
 
 	@script(
 		category= 'ffTools',
@@ -284,9 +313,10 @@ class NewProcessing():
 		else:
 			PROCESS= subprocess.Popen(self.command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 			stdout, stderr= PROCESS.communicate()
-			PROCESS.stdin.close()
-			PROCESS.stdout.close()
-			PROCESS.stderr.close()
+		PROCESS.stdin.close()
+		PROCESS.stdout.close()
+		PROCESS.stderr.close()
+		process.terminate()
 
 class ModifyDialog(wx.Dialog):
 	def __init__(self, parent, title, file_path, file_name):
