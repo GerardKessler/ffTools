@@ -1,2 +1,4 @@
-﻿.vscode/
+﻿addon/globalPlugins/ffTools/__pycache__/
+.vscode/
 *.ini
+*.exe

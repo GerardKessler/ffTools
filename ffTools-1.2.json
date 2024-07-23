@@ -1,0 +1,29 @@
+{
+	"addonId": "ffTools",
+	"displayName": "ffTools",
+	"URL": "",
+	"description": "Conjunto de herramientas del programa ffmpeg para el tratamiento de archivos multimedia",
+	"sha256": "c28fa8a9ef99520722fb226b2fd1749c4535389c52575e843e6d82a160c810ca",
+	"homepage": "https://github.com/GerardKessler/ffTools",
+	"addonVersionName": "1.2",
+	"addonVersionNumber": {
+		"major": 0,
+		"minor": 0,
+		"patch": 0
+	},
+	"minNVDAVersion": {
+		"major": 2022,
+		"minor": 4,
+		"patch": 1
+	},
+	"lastTestedVersion": {
+		"major": 2024,
+		"minor": 1,
+		"patch": 0
+	},
+	"channel": "stable",
+	"publisher": "",
+	"sourceURL": "https://github.com/GerardKessler/ffTools",
+	"license": null,
+	"licenseURL": null
+}

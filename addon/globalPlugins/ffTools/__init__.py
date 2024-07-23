@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (C) 2021 Gera Késsler <gera.kessler@gmail.com>
+# Copyright (C) 2024 Gera Késsler <gera.kessler@gmail.com>
 # This file is covered by the GNU General Public License.
 # This software uses code of FFMpeg. licensed under the LGPLv2.1
 
@@ -203,10 +203,23 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		gui.mainFrame.prePopup()
 		batch_dialog.Show()
 
+	def script_audioExtract(self, gesture):
+		self.finish(False)
+		if not self.check:
+			self.binFilesVerify()
+			return
+		file_path= getFilePath()
+		if file_path:
+			dir_path= os.path.dirname(file_path)
+			command= '"{}" -i "{}" -map 0:a:0 "{}\\stream1.mp3"'.format(MPEG_PATH, file_path, dir_path)
+			newProcessing= NewProcessing(command, False)
+			THREAD= Thread(target=newProcessing.newProcess, daemon= True)
+			THREAD.start()
+
 	@script(
-			category= 'ffTools',
-			# Translators: Descripción en el diálogo gestos de entrada
-			description= _('Activa la previsualización del archivo de audio o video con el foco')
+		category= 'ffTools',
+		# Translators: Descripción en el diálogo gestos de entrada
+		description= _('Activa la previsualización del archivo de audio o video con el foco')
 	)
 	def script_preview(self, gesture):
 		self.finish(False)
@@ -228,7 +241,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"kb:f1": "viewReadme",
 		"kb:f": "fileModify",
 		"kb:l": "batchConversion",
-		"kb:c": "fileCut"
+		"kb:c": "fileCut",
+		"kb:x": "audioExtract"
 	}
 
 class NewProcessing():
