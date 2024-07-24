@@ -107,6 +107,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		self.clearGestureBindings()
 
 	def binFilesVerify(self):
+		self.finish()
 		if os.path.isdir(os.path.join(MAIN_PATH, 'bin')):
 			self.check= True
 			return
@@ -158,10 +159,19 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		gui.messageBox(_('El proceso ha finalizado correctamente'), 'ffTools:', wx.OK)
 		self.check= True
 
+	def binFilesVerifyDecorator(fn):
+		def wrapper(self, gesture):
+			self.finish(False)
+			if not self.check:
+				self.binFilesVerify()
+				return
+			return fn(self, gesture)
+		return wrapper
+
 	@script(
 		category= 'ffTools',
 		# Translators: Descripción del elemento en el diálogo gestos de entrada
-		description= _('Activa la capa de comandos (f, modificación de formato. c, modificación de velocidad y corte. l, conversión por lotes)')
+		description= _('Activa la capa de comandos')
 	)
 	def script_commandLayer(self, gesture):
 		self.bindGestures(self.__newGestures)
@@ -170,10 +180,6 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		message(_('Comandos activados'))
 
 	def script_fileModify(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.binFilesVerify()
-			return
 		file_path= getFilePath()
 		if file_path:
 			file_name= os.path.split(file_path)[1]
@@ -181,11 +187,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame.prePopup()
 			modify_dialog.Show()
 
+	@binFilesVerifyDecorator
 	def script_fileCut(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.binFilesVerify()
-			return
 		file_path= getFilePath()
 		if file_path:
 			file_name= os.path.split(file_path)[1]
@@ -193,31 +196,27 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			gui.mainFrame.prePopup()
 			cut_dialog.Show()
 
+	@binFilesVerifyDecorator
 	def script_batchConversion(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.binFilesVerify()
-			return
 		# Translators: Título del diálogo de conversión por lotes
 		batch_dialog= BatchDialog(gui.mainFrame, _('Conversión por lotes'))
 		gui.mainFrame.prePopup()
 		batch_dialog.Show()
 
+	@binFilesVerifyDecorator
 	def script_audioExtract(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.binFilesVerify()
-			return
 		file_path= getFilePath()
 		if file_path:
 			dir_path = os.path.dirname(file_path)
-			file_name = os.path.splitext(os.path.basename(file_path))[0]
+			file_name = os.path.splitext(os.path.basename(file_path))[0].strip()
 			streams = self.numberOfStreams(file_path)
 			if streams == 0:
-					gui.messageBox('Sin pistas de audio para extraer', 'Error')
+					# Translators: Mensaje de error que avisa que no hay audios para extracción
+					gui.messageBox(_('Sin pistas de audio para extraer'), _('Error'))
 					return
-			command = '"{}" -i "{}" '.format(MPEG_PATH, file_path) + self.getPartialCommand(streams,dir_path, file_name)
-			message('Extrayendo {} pistas de audio. Por favor espere...'.format(streams))
+			map_command = self.getPartialCommand(streams,dir_path, file_name)
+			command = '"{}" -i "{}" '.format(MPEG_PATH, file_path) + map_command
+			message(_('Creando la carpeta {} y extrayendo {} pistas de audio. Por favor espere...'.format(file_name, streams)))
 			Thread(target=self.runCommand, args=(command,), daemon=True).start()
 
 	def getPartialCommand(self, streams, dir_path, file_name):
@@ -240,7 +239,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW)
 		process.communicate()
 		process.wait()
-		wx.CallAfter(gui.messageBox, 'Proceso finalizado', 'ffTools')
+		# Translators: Mensaje de proceso finalizado
+		wx.CallAfter(gui.messageBox, _('Proceso finalizado'), _('ffTools'))
 		process.stdout.close()
 		process.stderr.close()
 		process.terminate()
@@ -251,13 +251,9 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		description= _('Activa la previsualización del archivo de audio o video con el foco')
 	)
 	def script_preview(self, gesture):
-		self.finish(False)
-		if not self.check:
-			self.binFilesVerify()
-			return
 		file_path= getFilePath()
 		if file_path:
-			command= f'{PLAY_PATH} "{file_path}" -window_title "{os.path.splitext(os.path.split(file_path)[1])[0]}"'
+			command= f'"{PLAY_PATH}" -i "{file_path}" -window_title "{os.path.splitext(os.path.split(file_path)[1])[0]}"'
 			newProcessing= NewProcessing(command, False)
 			THREAD= Thread(target=newProcessing.newProcess, daemon= True)
 			THREAD.start()

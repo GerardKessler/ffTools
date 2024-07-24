@@ -35,6 +35,7 @@ Una vez activada la previsualización, en la ventana de reproducción funcionan 
 * f; Activa una ventana que permite modificar el volúmen, el formato, y el bitrate del archivo con el foco
 * c; Activa una ventana que permite modificar la velocidad, cortar el inicio y el final del archivo con el foco
 * l; Activa una ventana de conversión por lotes
+* x; Extrae las pistas de audio del archivo de video con el foco
 
 ## Recorte
 
@@ -60,6 +61,12 @@ Es importante tener en cuenta que el comando loudnorm solo funciona con archivos
 
 Los comandos de conversión son ejecutados en segundo plano a través de shell. Un sonido suave y constante representa el procesamiento, al finalizar se activa un diálogo modal que notifica la finalización del proceso.
 Los archivos convertidos se guardan en la carpeta convertidos, dentro del directorio seleccionado.
+
+### Extracción de las pistas de audio de un video
+
+Situados en el explorador de archivos de Windows sobre un archivo de video, y activada la capa de comandos con el gesto correspondiente, al pulsar la letra x se activa esta funcionalidad.
+El proceso verifica cuantos streams de audio contiene el archivo, y en el caso de tener 1 o más, los extrae y los guarda en una carpeta que el módulo crea en la misma ruta del archivo y con el mismo nombre.
+Los archivos se extraen en formato mp3 con el nombre stream y el número de pista. Al finalizar un diálogo modal notifica la finalización del proceso.
 
 ### Licencias de terceros
 
